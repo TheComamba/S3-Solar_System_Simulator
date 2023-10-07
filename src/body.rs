@@ -2,9 +2,16 @@ use crate::initial_parameters::{Float, DIMENSIONALITY, G, ROCK_DENSITY};
 use rand_distr::{Distribution, Normal};
 
 pub(crate) struct Body {
+    pub(crate) index: u32,
     pub(crate) position: Vec<Float>,
     pub(crate) velocity: Vec<Float>,
     pub(crate) mass: Float,
+}
+
+impl PartialEq for Body {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
+    }
 }
 
 impl Body {
@@ -17,8 +24,14 @@ impl Body {
         vector
     }
 
-    pub(crate) fn new(position_variance: Float, velocity_variance: Float, mass: Float) -> Body {
+    pub(crate) fn new(
+        index: u32,
+        position_variance: Float,
+        velocity_variance: Float,
+        mass: Float,
+    ) -> Body {
         Body {
+            index,
             position: Self::random_vector(position_variance),
             velocity: Self::random_vector(velocity_variance),
             mass,

@@ -11,14 +11,16 @@ pub(crate) struct StellarSystem {
 impl StellarSystem {
     pub(crate) fn new(params: InitialParameters) -> StellarSystem {
         let mut bodies = vec![Body::new(
+            0,
             0.,
             0.,
             params.total_mass * params.stellar_mass_fraction,
         )];
-        for _ in 0..params.body_count {
+        for i in 0..params.body_count {
             let mass = params.total_mass * (1. - params.stellar_mass_fraction)
                 / params.body_count as Float;
             bodies.push(Body::new(
+                i + 1,
                 params.position_variance,
                 params.velocity_variance,
                 mass,
@@ -47,18 +49,27 @@ impl StellarSystem {
             .collect::<Vec<Float>>()
     }
 
-    pub(crate) fn evolve(&mut self, time_step: Float) {
+    fn do_collisions(&mut self, time_step: Float) {
+        let mut bodies_to_merge = vec![];
         for i in 0..self.bodies.len() {
-            for j in 0..self.bodies.len() {
-                if i == j {
-                    continue;
-                }
-                if self.bodies[i].collides_with(&self.bodies[j], time_step) {
-                    self.bodies[i].merge_with(&self.bodies[j]);
-                    self.bodies.remove(j);
+            for j in (i + 1)..self.bodies.len() {
+                let body1 = &self.bodies[i];
+                let body2 = &self.bodies[j];
+                if body1.collides_with(&body2, time_step) {
+                    bodies_to_merge.push((body1, body2));
                 }
             }
         }
+        for (body1, body2) in bodies_to_merge.iter_mut() {
+            if self.bodies.contains(&body1) {
+                body1.merge_with(&body2);
+                self.bodies.retain(|x| x != body2);
+            }
+        }
+    }
+
+    pub(crate) fn evolve(&mut self, time_step: Float) {
+        self.do_collisions(time_step);
 
         let mut accelerations = vec![vec![0.; DIMENSIONALITY]; self.bodies.len()];
         for i in 0..self.bodies.len() {
