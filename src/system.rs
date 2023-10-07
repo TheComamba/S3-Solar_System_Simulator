@@ -48,6 +48,18 @@ impl StellarSystem {
     }
 
     pub(crate) fn evolve(&mut self, time_step: Float) {
+        for i in 0..self.bodies.len() {
+            for j in 0..self.bodies.len() {
+                if i == j {
+                    continue;
+                }
+                if self.bodies[i].collides_with(&self.bodies[j], time_step) {
+                    self.bodies[i].merge_with(&self.bodies[j]);
+                    self.bodies.remove(j);
+                }
+            }
+        }
+
         let mut accelerations = vec![vec![0.; DIMENSIONALITY]; self.bodies.len()];
         for i in 0..self.bodies.len() {
             for j in 0..self.bodies.len() {
