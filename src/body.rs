@@ -2,9 +2,9 @@ use crate::initial_parameters::{Float, DIMENSIONALITY, ROCK_DENSITY};
 use rand_distr::{Distribution, Normal};
 
 pub(crate) struct Body {
-    position: Vec<Float>,
-    velocity: Vec<Float>,
-    mass: Float,
+    pub(crate) position: Vec<Float>,
+    pub(crate) velocity: Vec<Float>,
+    pub(crate) mass: Float,
 }
 
 impl Body {

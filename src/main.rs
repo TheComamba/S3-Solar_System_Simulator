@@ -7,5 +7,6 @@ mod system;
 
 fn main() {
     let params = InitialParameters::default();
-    let system = StellarSystem::new(params);
+    let mut system = StellarSystem::new(params);
+    system.evolve(1.);
 }
