@@ -18,7 +18,7 @@ pub(crate) struct Gui {
 }
 
 impl Sandbox for Gui {
-    type Message = ();
+    type Message = GuiMessage;
 
     fn new() -> Self {
         Gui {
@@ -30,10 +30,17 @@ impl Sandbox for Gui {
         String::from("S3 - Solar System Simulator")
     }
 
-    fn update(&mut self, _message: Self::Message) {}
+    fn update(&mut self, message: Self::Message) {
+        match message {
+            GuiMessage::Evolve => {
+                self.canvas_state.system.evolve(1e-1);
+                self.canvas_state.bodies_cache.clear();
+            }
+        };
+    }
 
     fn view(&self) -> iced::Element<'_, Self::Message> {
-        let evolve_button = Button::new(Text::new("Evolve"));
+        let evolve_button = Button::new(Text::new("Evolve")).on_press(GuiMessage::Evolve);
         let canvas = iced::widget::canvas(&self.canvas_state)
             .width(Length::Fill)
             .height(Length::Fill);
@@ -64,7 +71,7 @@ impl CanvasState {
             bodies_cache: canvas::Cache::default(),
             system,
             body_size_factor: 5e5,
-            system_size_factor: 5e2,
+            system_size_factor: 1e2,
         }
     }
 }
@@ -103,4 +110,7 @@ impl<GuiMessage> canvas::Program<GuiMessage> for CanvasState {
     }
 }
 
-enum GuiMessage {}
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum GuiMessage {
+    Evolve,
+}

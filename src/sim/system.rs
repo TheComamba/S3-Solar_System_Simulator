@@ -4,7 +4,7 @@ use crate::{
 };
 
 pub(crate) struct StellarSystem {
-    current_time: Float,
+    pub(crate) current_time: Float,
     pub(crate) bodies: Vec<Body>,
 }
 
