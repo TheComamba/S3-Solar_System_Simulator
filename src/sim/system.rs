@@ -1,11 +1,12 @@
 use crate::{
-    body::Body,
-    initial_parameters::{Float, InitialParameters, DIMENSIONALITY, G},
+    sim::body::Body,
+    sim::initial_parameters::{Float, InitialParameters, DIMENSIONALITY, G},
 };
 
+#[derive(Clone, Debug)]
 pub(crate) struct StellarSystem {
-    current_time: Float,
-    bodies: Vec<Body>,
+    pub(crate) current_time: Float,
+    pub(crate) bodies: Vec<Body>,
 }
 
 impl StellarSystem {
@@ -95,5 +96,59 @@ impl StellarSystem {
             }
         }
         self.current_time += time_step;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gravitation_is_attractive() {
+        const TIME_STEP: Float = 1e1;
+
+        let position1 = vec![1., 0.];
+        let position2 = vec![-1., 0.];
+        let velocity1 = vec![0., 0.];
+        let velocity2 = vec![0., 0.];
+        let body1 = Body {
+            position: position1,
+            velocity: velocity1,
+            mass: 1.,
+            index: 1,
+        };
+        let body2 = Body {
+            position: position2,
+            velocity: velocity2,
+            mass: 1.,
+            index: 2,
+        };
+        let mut system = StellarSystem {
+            current_time: 0.,
+            bodies: vec![body1, body2],
+        };
+
+        system.evolve(TIME_STEP);
+        system.evolve(TIME_STEP);
+        println!("{:?}", system);
+
+        assert!(system.bodies[0].position[0] < 1.);
+        assert!(system.bodies[1].position[0] > -1.);
+        assert!(system.bodies[0].velocity[0] < 0.);
+        assert!(system.bodies[1].velocity[0] > 0.);
+
+        let mut loop_count = 0;
+        while system.bodies.len() > 1 && loop_count < 10_000 {
+            system.evolve(TIME_STEP);
+            loop_count += 1;
+        }
+        print!("Looped {} times.", loop_count);
+        println!("{:?}", system);
+
+        assert!(system.bodies.len() == 1);
+        assert!(system.bodies[0].position[0].abs() < 1e-5);
+        assert!(system.bodies[0].position[1].abs() < 1e-5);
+        assert!(system.bodies[0].velocity[0].abs() < 1e-5);
+        assert!(system.bodies[0].velocity[1].abs() < 1e-5);
     }
 }

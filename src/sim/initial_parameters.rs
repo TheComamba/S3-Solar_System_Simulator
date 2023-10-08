@@ -18,7 +18,7 @@ impl Default for InitialParameters {
             total_mass: 1.,
             stellar_mass_fraction: 0.5,
             position_variance: 1.,
-            velocity_variance: 1.,
+            velocity_variance: 0.,
         }
     }
 }

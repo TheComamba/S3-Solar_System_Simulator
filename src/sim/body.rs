@@ -1,4 +1,4 @@
-use crate::initial_parameters::{Float, DIMENSIONALITY, G, ROCK_DENSITY};
+use crate::sim::initial_parameters::{Float, DIMENSIONALITY, G, ROCK_DENSITY};
 use rand_distr::{Distribution, Normal};
 
 #[derive(Clone, Debug)]
@@ -99,5 +99,64 @@ impl Body {
                 (self.velocity[i] * self.mass + other.velocity[i] * other.mass) / total_mass;
         }
         self.mass = total_mass;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn collide_bodies_with_same_mass_and_opposite_velocities() {
+        let position1 = vec![1., 2.];
+        let position2 = vec![-1., -2.];
+        let velocity1 = vec![3., 4.];
+        let velocity2 = vec![-3., -4.];
+        let mut body1 = Body {
+            position: position1,
+            velocity: velocity1,
+            mass: 1.,
+            index: 1,
+        };
+        let body2 = Body {
+            position: position2,
+            velocity: velocity2,
+            mass: 1.,
+            index: 2,
+        };
+
+        body1.merge_with(&body2);
+
+        assert!(body1.position[0].abs() < 1e-5);
+        assert!(body1.position[1].abs() < 1e-5);
+        assert!(body1.velocity[0].abs() < 1e-5);
+        assert!(body1.velocity[1].abs() < 1e-5);
+    }
+
+    #[test]
+    fn collide_large_with_small_body() {
+        let position1 = vec![0., 0.];
+        let position2 = vec![1., 1.];
+        let velocity1 = vec![0., 0.];
+        let velocity2 = vec![1., 1.];
+        let mut body1 = Body {
+            position: position1,
+            velocity: velocity1,
+            mass: 1e5,
+            index: 1,
+        };
+        let body2 = Body {
+            position: position2,
+            velocity: velocity2,
+            mass: 1e-5,
+            index: 2,
+        };
+
+        body1.merge_with(&body2);
+
+        assert!(body1.position[0].abs() < 1e-5);
+        assert!(body1.position[1].abs() < 1e-5);
+        assert!(body1.velocity[0].abs() < 1e-5);
+        assert!(body1.velocity[1].abs() < 1e-5);
     }
 }
