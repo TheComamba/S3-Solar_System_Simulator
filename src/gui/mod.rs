@@ -3,12 +3,15 @@ use std::vec;
 use iced::{
     widget::{
         canvas::{self, Path},
-        Button, Row, Text,
+        Button, Column, Text,
     },
     Color, Length, Sandbox, Size,
 };
 
-use crate::sim::{initial_parameters::InitialParameters, system::StellarSystem};
+use crate::sim::{
+    initial_parameters::{Float, InitialParameters},
+    system::StellarSystem,
+};
 
 pub(crate) struct Gui {
     canvas_state: CanvasState,
@@ -34,7 +37,13 @@ impl Sandbox for Gui {
         let canvas = iced::widget::canvas(&self.canvas_state)
             .width(Length::Fill)
             .height(Length::Fill);
-        Row::new().push(evolve_button).push(canvas).into()
+        Column::new()
+            .push(evolve_button)
+            .push(canvas)
+            .align_items(iced::Alignment::Center)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
     }
 }
 
@@ -42,6 +51,8 @@ struct CanvasState {
     background_cache: canvas::Cache,
     bodies_cache: canvas::Cache,
     system: StellarSystem,
+    body_size_factor: Float,
+    system_size_factor: Float,
 }
 
 impl CanvasState {
@@ -52,6 +63,8 @@ impl CanvasState {
             background_cache: canvas::Cache::default(),
             bodies_cache: canvas::Cache::default(),
             system,
+            body_size_factor: 5e5,
+            system_size_factor: 5e2,
         }
     }
 }
@@ -75,14 +88,18 @@ impl<GuiMessage> canvas::Program<GuiMessage> for CanvasState {
         let bodies = self.bodies_cache.draw(renderer, bounds.size(), |frame| {
             let bodies = Path::new(|path_builder| {
                 for body in &self.system.bodies {
-                    let pos =
-                        frame.center() + iced::Vector::new(body.position[0], body.position[1]);
-                    path_builder.circle(pos, body.radius());
+                    let radius = body.radius() * self.body_size_factor;
+                    let pos = frame.center()
+                        + iced::Vector::new(
+                            body.position[0] * self.system_size_factor,
+                            body.position[1] * self.system_size_factor,
+                        );
+                    path_builder.circle(pos, radius);
                 }
             });
             frame.fill(&bodies, Color::BLACK);
         });
-        vec![background, bodies]
+        vec![bodies]
     }
 }
 
