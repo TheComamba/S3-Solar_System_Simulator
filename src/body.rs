@@ -1,6 +1,7 @@
 use crate::initial_parameters::{Float, DIMENSIONALITY, G, ROCK_DENSITY};
 use rand_distr::{Distribution, Normal};
 
+#[derive(Clone, Debug)]
 pub(crate) struct Body {
     pub(crate) index: u32,
     pub(crate) position: Vec<Float>,

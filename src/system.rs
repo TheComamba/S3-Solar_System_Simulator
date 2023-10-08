@@ -60,11 +60,16 @@ impl StellarSystem {
                 }
             }
         }
-        for (body1, body2) in bodies_to_merge.iter_mut() {
-            if self.bodies.contains(&body1) {
-                body1.merge_with(&body2);
-                self.bodies.retain(|x| x != body2);
+
+        if !bodies_to_merge.is_empty() {
+            let mut new_bodies = self.bodies.clone();
+            for (body1, body2) in bodies_to_merge.iter() {
+                let mut new_body = (*body1).clone();
+                new_body.merge_with(&body2);
+                new_bodies.retain(|x| x.index != body1.index && x.index != body2.index);
+                new_bodies.push(new_body);
             }
+            self.bodies = new_bodies;
         }
     }
 
