@@ -1,12 +1,9 @@
-use initial_parameters::InitialParameters;
-use system::StellarSystem;
+use gui::Gui;
+use iced::{Sandbox, Settings};
 
-mod body;
-mod initial_parameters;
-mod system;
+mod gui;
+mod sim;
 
-fn main() {
-    let params = InitialParameters::default();
-    let mut system = StellarSystem::new(params);
-    system.evolve(1.);
+fn main() -> iced::Result {
+    Gui::run(Settings::default())
 }

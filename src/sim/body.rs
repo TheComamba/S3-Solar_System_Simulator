@@ -1,4 +1,4 @@
-use crate::initial_parameters::{Float, DIMENSIONALITY, G, ROCK_DENSITY};
+use crate::sim::initial_parameters::{Float, DIMENSIONALITY, G, ROCK_DENSITY};
 use rand_distr::{Distribution, Normal};
 
 #[derive(Clone, Debug)]

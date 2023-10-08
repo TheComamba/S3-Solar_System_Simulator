@@ -1,6 +1,6 @@
 use crate::{
-    body::Body,
-    initial_parameters::{Float, InitialParameters, DIMENSIONALITY, G},
+    sim::body::Body,
+    sim::initial_parameters::{Float, InitialParameters, DIMENSIONALITY, G},
 };
 
 pub(crate) struct StellarSystem {
