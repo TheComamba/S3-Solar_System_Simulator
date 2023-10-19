@@ -74,9 +74,46 @@ impl StellarSystem {
         }
     }
 
-    pub(crate) fn evolve(&mut self, time_step: Float) {
-        self.do_collisions(time_step);
+    /*
+       r > v * t
+       r / v > t
+       r^2 / v^2 > t^2
+    */
+    fn get_timestep(&self, max: Float) -> Float {
+        let mut time_step_sqrd = max * max;
+        for i in 0..self.bodies.len() {
+            for j in (i + 1)..self.bodies.len() {
+                let body1 = &self.bodies[i];
+                let body2 = &self.bodies[j];
 
+                assert_eq!(DIMENSIONALITY, 2);
+                let r = body1
+                    .position
+                    .iter()
+                    .zip(body2.position.iter())
+                    .map(|(x, y)| (x - y).abs())
+                    .collect::<Vec<Float>>();
+                let v = body1
+                    .velocity
+                    .iter()
+                    .zip(body2.velocity.iter())
+                    .map(|(x, y)| (x - y).abs())
+                    .collect::<Vec<Float>>();
+                let r_sqrd = r.iter().map(|x| x * x).sum::<Float>();
+                let v_sqrd = v.iter().map(|x| x * x).sum::<Float>();
+                let candidate = r_sqrd / v_sqrd;
+                if candidate < time_step_sqrd {
+                    time_step_sqrd = candidate;
+                }
+            }
+        }
+        if time_step_sqrd < 1e-10 {
+            time_step_sqrd = 1e-10;
+        }
+        time_step_sqrd.sqrt()
+    }
+
+    fn do_evolution_step(&mut self, time_step: Float) {
         let mut accelerations = vec![vec![0.; DIMENSIONALITY]; self.bodies.len()];
         for i in 0..self.bodies.len() {
             for j in 0..self.bodies.len() {
@@ -96,6 +133,15 @@ impl StellarSystem {
             }
         }
         self.current_time += time_step;
+    }
+
+    pub(crate) fn evolve_for(&mut self, time: Float) {
+        let target_time = self.current_time + time;
+        while self.current_time < target_time {
+            let time_step = self.get_timestep(target_time - self.current_time);
+            self.do_collisions(time_step);
+            self.do_evolution_step(time_step);
+        }
     }
 }
 
@@ -174,8 +220,8 @@ mod tests {
             bodies: vec![body1, body2],
         };
 
-        system.evolve(TIME_STEP);
-        system.evolve(TIME_STEP);
+        system.evolve_for(TIME_STEP);
+        system.evolve_for(TIME_STEP);
         println!("{:?}", system);
 
         assert!(system.bodies[0].position[0] < 1.);
@@ -185,7 +231,7 @@ mod tests {
 
         let mut loop_count = 0;
         while system.bodies.len() > 1 && loop_count < 10_000 {
-            system.evolve(TIME_STEP);
+            system.evolve_for(TIME_STEP);
             loop_count += 1;
         }
         println!("Looped {} times.", loop_count);
@@ -219,7 +265,7 @@ mod tests {
         };
         let mut loop_count = 0;
         while system.bodies.len() > 1 && loop_count < 10_000 {
-            system.evolve(TIME_STEP);
+            system.evolve_for(TIME_STEP);
             loop_count += 1;
         }
         println!("Looped {} times.", loop_count);
@@ -230,5 +276,40 @@ mod tests {
         assert!(system.bodies[0].position[1].abs() < 1e-5);
         assert!(system.bodies[0].velocity[0].abs() < 1e-5);
         assert!(system.bodies[0].velocity[1].abs() < 1e-5);
+    }
+
+    #[test]
+    fn two_body_system_is_stable() {
+        const TIME_STEP: Float = 1e1;
+        let body1 = Body {
+            position: vec![0., 0.],
+            velocity: vec![0., 0.],
+            mass: 1.,
+            index: 1,
+        };
+        let body2 = Body {
+            position: vec![1., 0.],
+            velocity: vec![0., 1.],
+            mass: 1.,
+            index: 2,
+        };
+        let mut system = StellarSystem {
+            current_time: 0.,
+            bodies: vec![body1, body2],
+        };
+        for _ in 0..10_000 {
+            system.evolve_for(TIME_STEP);
+        }
+        println!("{:?}", system);
+
+        assert!(system.bodies.len() == 2);
+        assert!(system.bodies[0].position[0].abs() < 1e3);
+        assert!(system.bodies[0].position[1].abs() < 1e3);
+        assert!(system.bodies[0].velocity[0].abs() < 1e3);
+        assert!(system.bodies[0].velocity[1].abs() < 1e3);
+        assert!(system.bodies[1].position[0].abs() < 1e3);
+        assert!(system.bodies[1].position[1].abs() < 1e3);
+        assert!(system.bodies[1].velocity[0].abs() < 1e3);
+        assert!(system.bodies[1].velocity[1].abs() < 1e3);
     }
 }

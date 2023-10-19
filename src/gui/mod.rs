@@ -33,7 +33,7 @@ impl Sandbox for Gui {
     fn update(&mut self, message: Self::Message) {
         match message {
             GuiMessage::Evolve => {
-                self.canvas_state.system.evolve(1e1);
+                self.canvas_state.system.evolve_for(1e1);
                 self.canvas_state.bodies_cache.clear();
             }
         };
