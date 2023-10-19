@@ -322,7 +322,6 @@ mod tests {
     #[test]
     fn bodies_at_same_position_collide() {
         let v_x_values = vec![-1., 0., 1., 1e5];
-        let v_x_values = vec![0.];
         let v_y_values = v_x_values.clone();
         for v_x in v_x_values.iter() {
             for v_y in v_y_values.iter() {
@@ -358,29 +357,35 @@ mod tests {
 
     #[test]
     fn timestep_for_bodies_at_same_position_is_small() {
-        let v_x_values = vec![-1., 0., 1., 1e5];
-        let v_y_values = v_x_values.clone();
-        for v_x in v_x_values.iter() {
-            for v_y in v_y_values.iter() {
-                println!("v_x = {}, v_y = {}", v_x, v_y);
-                const TIME_STEP: Float = 1e1;
-                let body1 = Body {
-                    position: vec![0., 0.],
-                    velocity: vec![*v_x, *v_y],
-                    mass: 1.,
-                    index: 1,
-                };
-                let body2 = Body {
-                    position: vec![0., 0.],
-                    velocity: vec![-v_x, -v_y],
-                    mass: 1.,
-                    index: 2,
-                };
-                let system = StellarSystem {
-                    current_time: 0.,
-                    bodies: vec![body1, body2],
-                };
-                assert!(system.get_timestep(TIME_STEP) < 1.1 * MIN_TIMESTEP);
+        let values = vec![-1., 0., 1., 1e5];
+        for v_x_1 in values.iter() {
+            for v_y_1 in values.iter() {
+                for v_x_2 in values.iter() {
+                    for v_y_2 in values.iter() {
+                        println!(
+                            "v_x_1 = {}, v_y_1 = {}, v_x_2 = {}, v_y_2 = {}",
+                            v_x_1, v_y_1, v_x_2, v_y_2
+                        );
+                        const TIME_STEP: Float = 1e1;
+                        let body1 = Body {
+                            position: vec![0., 0.],
+                            velocity: vec![*v_x_1, *v_y_1],
+                            mass: 1.,
+                            index: 1,
+                        };
+                        let body2 = Body {
+                            position: vec![0., 0.],
+                            velocity: vec![*v_x_2, *v_y_2],
+                            mass: 1.,
+                            index: 2,
+                        };
+                        let system = StellarSystem {
+                            current_time: 0.,
+                            bodies: vec![body1, body2],
+                        };
+                        assert!(system.get_timestep(TIME_STEP) < 1.1 * MIN_TIMESTEP);
+                    }
+                }
             }
         }
     }
