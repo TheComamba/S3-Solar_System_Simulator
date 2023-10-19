@@ -3,6 +3,8 @@ use crate::{
     sim::initial_parameters::{Float, InitialParameters, DIMENSIONALITY, G},
 };
 
+const MIN_TIMESTEP: Float = 1e-5;
+
 #[derive(Clone, Debug)]
 pub(crate) struct StellarSystem {
     pub(crate) current_time: Float,
@@ -100,17 +102,21 @@ impl StellarSystem {
                     .map(|(x, y)| (x - y).abs())
                     .collect::<Vec<Float>>();
                 let r_sqrd = r.iter().map(|x| x * x).sum::<Float>();
-                let v_sqrd = v.iter().map(|x| x * x).sum::<Float>();
+                let mut v_sqrd = v.iter().map(|x| x * x).sum::<Float>();
+                if v_sqrd < MIN_TIMESTEP * MIN_TIMESTEP {
+                    v_sqrd = MIN_TIMESTEP * MIN_TIMESTEP;
+                }
                 let candidate = r_sqrd / v_sqrd;
                 if candidate < time_step_sqrd {
                     time_step_sqrd = candidate;
                 }
             }
         }
-        if time_step_sqrd < 1e-10 {
-            time_step_sqrd = 1e-10;
+        if time_step_sqrd < MIN_TIMESTEP * MIN_TIMESTEP {
+            MIN_TIMESTEP
+        } else {
+            time_step_sqrd.sqrt()
         }
-        time_step_sqrd.sqrt()
     }
 
     fn do_evolution_step(&mut self, time_step: Float) {
@@ -311,5 +317,70 @@ mod tests {
         assert!(system.bodies[1].position[1].abs() < 1e3);
         assert!(system.bodies[1].velocity[0].abs() < 1e3);
         assert!(system.bodies[1].velocity[1].abs() < 1e3);
+    }
+
+    #[test]
+    fn bodies_at_same_position_collide() {
+        let v_x_values = vec![-1., 0., 1., 1e5];
+        let v_y_values = v_x_values.clone();
+        for v_x in v_x_values.iter() {
+            for v_y in v_y_values.iter() {
+                println!("v_x = {}, v_y = {}", v_x, v_y);
+                const TIME_STEP: Float = 1e1;
+                let body1 = Body {
+                    position: vec![0., 0.],
+                    velocity: vec![*v_x, *v_y],
+                    mass: 1.,
+                    index: 1,
+                };
+                let body2 = Body {
+                    position: vec![0., 0.],
+                    velocity: vec![-v_x, -v_y],
+                    mass: 1.,
+                    index: 2,
+                };
+                let mut system = StellarSystem {
+                    current_time: 0.,
+                    bodies: vec![body1, body2],
+                };
+                system.evolve_for(TIME_STEP);
+                println!("{:?}", system);
+
+                assert!(system.bodies.len() == 1);
+                assert!(system.bodies[0].position[0].abs() < 1e-5);
+                assert!(system.bodies[0].position[1].abs() < 1e-5);
+                assert!(system.bodies[0].velocity[0].abs() < 1e-5);
+                assert!(system.bodies[0].velocity[1].abs() < 1e-5);
+            }
+        }
+    }
+
+    #[test]
+    fn timestep_for_bodies_at_same_position_is_small() {
+        let v_x_values = vec![-1., 0., 1., 1e5];
+        let v_y_values = v_x_values.clone();
+        for v_x in v_x_values.iter() {
+            for v_y in v_y_values.iter() {
+                println!("v_x = {}, v_y = {}", v_x, v_y);
+                const TIME_STEP: Float = 1e1;
+                let body1 = Body {
+                    position: vec![0., 0.],
+                    velocity: vec![*v_x, *v_y],
+                    mass: 1.,
+                    index: 1,
+                };
+                let body2 = Body {
+                    position: vec![0., 0.],
+                    velocity: vec![-v_x, -v_y],
+                    mass: 1.,
+                    index: 2,
+                };
+                let system = StellarSystem {
+                    current_time: 0.,
+                    bodies: vec![body1, body2],
+                };
+                assert!(system.get_timestep(TIME_STEP) < 1.1 * MIN_TIMESTEP);
+            }
+        }
     }
 }
