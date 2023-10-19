@@ -188,7 +188,7 @@ mod tests {
             system.evolve(TIME_STEP);
             loop_count += 1;
         }
-        print!("Looped {} times.", loop_count);
+        println!("Looped {} times.", loop_count);
         println!("{:?}", system);
 
         assert!(system.bodies.len() == 1);
@@ -204,13 +204,13 @@ mod tests {
         let body1 = Body {
             position: vec![0., 0.],
             velocity: vec![0., 0.],
-            mass: 1e-5,
+            mass: 1e5,
             index: 1,
         };
         let body2 = Body {
             position: vec![1., 1.],
             velocity: vec![0., 0.],
-            mass: 1e5,
+            mass: 1e-5,
             index: 2,
         };
         let mut system = StellarSystem {
@@ -222,7 +222,7 @@ mod tests {
             system.evolve(TIME_STEP);
             loop_count += 1;
         }
-        print!("Looped {} times.", loop_count);
+        println!("Looped {} times.", loop_count);
         println!("{:?}", system);
 
         assert!(system.bodies.len() == 1);
