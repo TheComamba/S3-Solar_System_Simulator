@@ -1,6 +1,8 @@
 use crate::sim::initial_parameters::{Float, DIMENSIONALITY, G, ROCK_DENSITY};
 use rand_distr::{Distribution, Normal};
 
+use super::system::MIN_TIMESTEP;
+
 #[derive(Clone, Debug)]
 pub(crate) struct Body {
     pub(crate) index: u32,
@@ -55,7 +57,7 @@ impl Body {
         }
         let distance_squared = relative_position.iter().map(|x| x * x).sum::<Float>();
         let relative_speed_squared = relative_velocity.iter().map(|x| x * x).sum::<Float>();
-        relative_speed_squared.sqrt() * time_step > distance_squared.sqrt()
+        2. * relative_speed_squared.sqrt() * time_step + MIN_TIMESTEP > distance_squared.sqrt()
     }
 
     fn specific_relative_angular_momentum(&self, other: &Self) -> Float {
@@ -158,5 +160,41 @@ mod tests {
         assert!(body1.position[1].abs() < 1e-5);
         assert!(body1.velocity[0].abs() < 1e-5);
         assert!(body1.velocity[1].abs() < 1e-5);
+    }
+
+    #[test]
+    fn bodies_at_same_position_come_close_and_will_collide() {
+        let values = vec![-1., 0., 1., 1e5];
+        for x in values.iter() {
+            for y in values.iter() {
+                for v_x_1 in values.iter() {
+                    for v_y_1 in values.iter() {
+                        for v_x_2 in values.iter() {
+                            for v_y_2 in values.iter() {
+                                println!(
+                                    "x: {}, y: {}, v_x_1: {}, v_y_1: {}, v_x_2: {}, v_y_2: {}",
+                                    x, y, v_x_1, v_y_1, v_x_2, v_y_2
+                                );
+                                let body1 = Body {
+                                    position: vec![*x, *y],
+                                    velocity: vec![*v_x_1, *v_y_1],
+                                    mass: 1.,
+                                    index: 1,
+                                };
+                                let body2 = Body {
+                                    position: vec![*x, *y],
+                                    velocity: vec![*v_x_2, *v_y_2],
+                                    mass: 1.,
+                                    index: 2,
+                                };
+
+                                assert!(body1.comes_close(&body2, 1.));
+                                assert!(body1.will_collide(&body2));
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

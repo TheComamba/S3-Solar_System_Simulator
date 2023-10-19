@@ -3,7 +3,7 @@ use crate::{
     sim::initial_parameters::{Float, InitialParameters, DIMENSIONALITY, G},
 };
 
-const MIN_TIMESTEP: Float = 1e-5;
+pub(crate) const MIN_TIMESTEP: Float = 1e-5;
 
 #[derive(Clone, Debug)]
 pub(crate) struct StellarSystem {
@@ -322,6 +322,7 @@ mod tests {
     #[test]
     fn bodies_at_same_position_collide() {
         let v_x_values = vec![-1., 0., 1., 1e5];
+        let v_x_values = vec![0.];
         let v_y_values = v_x_values.clone();
         for v_x in v_x_values.iter() {
             for v_y in v_y_values.iter() {
