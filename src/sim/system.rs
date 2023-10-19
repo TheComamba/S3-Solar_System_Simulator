@@ -406,4 +406,41 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn near_miss_is_irrelevant_for_large_body() {
+        const TIME_STEP: Float = 1e1;
+        let body1 = Body {
+            position: vec![0., 0.],
+            velocity: vec![0., 0.],
+            mass: 1e5,
+            index: 1,
+        };
+        let body2 = Body {
+            position: vec![0.1, -10.],
+            velocity: vec![0., 10.],
+            mass: 1e-5,
+            index: 2,
+        };
+        let mut system = StellarSystem {
+            current_time: 0.,
+            bodies: vec![body1, body2],
+        };
+        let mut loop_count = 0;
+        while (system.bodies[1].position[0].powi(2) + system.bodies[1].position[1].powi(2)).sqrt()
+            < 1e3
+            && loop_count < 10_000
+        {
+            system.evolve_for(TIME_STEP);
+            loop_count += 1;
+            assert!(system.bodies.len() == 2);
+        }
+        println!("Looped {} times.", loop_count);
+        println!("{:?}", system);
+
+        assert!(system.bodies[0].position[0].abs() < 1e-5);
+        assert!(system.bodies[0].position[1].abs() < 1e-5);
+        assert!(system.bodies[0].velocity[0].abs() < 1e-5);
+        assert!(system.bodies[0].velocity[1].abs() < 1e-5);
+    }
 }
