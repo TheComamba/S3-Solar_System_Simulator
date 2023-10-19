@@ -42,12 +42,7 @@ impl StellarSystem {
         }
         let r_squared = r.iter().map(|x| x * x).sum::<Float>();
         let r_cubed = r_squared * r_squared.sqrt();
-        let r_unit = r
-            .iter()
-            .map(|x| x / r_squared.sqrt())
-            .collect::<Vec<Float>>();
-        r_unit
-            .iter()
+        r.iter()
             .map(|x| -G * accelerating.mass * x / r_cubed)
             .collect::<Vec<Float>>()
     }
@@ -241,6 +236,68 @@ mod tests {
                 assert!(acc_1[1].abs() < 1e-5);
                 assert!(acc_2[0].abs() < 1e-5);
                 assert!(acc_2[1].abs() < 1e-5);
+            }
+        }
+    }
+
+    /*
+       F = G * m1 * m2 / r^2
+    */
+    #[test]
+    fn unit_masses_at_unit_distance_accelerate_with_g() {
+        let body1 = Body {
+            position: vec![0., 0.],
+            velocity: vec![0., 0.],
+            mass: 1.,
+            index: 1,
+        };
+        let body2 = Body {
+            position: vec![1., 0.],
+            velocity: vec![0., 0.],
+            mass: 1.,
+            index: 2,
+        };
+        let acc_1 = StellarSystem::get_acceleration(&body1, &body2)[0].abs();
+        let acc_2 = StellarSystem::get_acceleration(&body2, &body1)[0].abs();
+        println!("Acceleration of body 1: {}", acc_1);
+        println!("Acceleration of body 2: {}", acc_2);
+        print!("G: {}", G);
+        assert!((acc_1 - G).abs() < 1e-5);
+        assert!((acc_2 - G).abs() < 1e-5);
+    }
+
+    #[test]
+    fn force_is_negative_gradient_of_potential() {
+        let masses = vec![1., 1e2, 1e3];
+        for m1 in masses.iter() {
+            for m2 in masses.iter() {
+                const D: Float = 1e-2;
+                let body1 = Body {
+                    position: vec![0., 0.],
+                    velocity: vec![0., 0.],
+                    mass: *m1,
+                    index: 1,
+                };
+                let mut body2 = Body {
+                    position: vec![1., 0.],
+                    velocity: vec![0., 0.],
+                    mass: *m2,
+                    index: 2,
+                };
+                let force_1_from_acc =
+                    body1.mass * StellarSystem::get_acceleration(&body1, &body2)[0].abs();
+                let force_2_from_acc =
+                    body2.mass * StellarSystem::get_acceleration(&body2, &body1)[0].abs();
+                let pot_1 = body1.relative_potential_energy(&body2);
+                body2.position[1] += D;
+                let pot_2 = body1.relative_potential_energy(&body2);
+                let force_from_pot = ((pot_1 - pot_2) / D).abs();
+
+                println!("Force from acceleration 1: {}", force_1_from_acc);
+                println!("Force from acceleration 2: {}", force_2_from_acc);
+                println!("Force from potential: {}", force_from_pot);
+                assert!((force_1_from_acc - force_from_pot).abs() < 1e-5);
+                assert!((force_2_from_acc - force_from_pot).abs() < 1e-5);
             }
         }
     }

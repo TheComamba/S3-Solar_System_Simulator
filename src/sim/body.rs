@@ -103,6 +103,7 @@ impl Body {
         self.mass = total_mass;
     }
 
+    #[cfg(test)]
     pub(crate) fn relative_kinetic_energy(&self, other: &Self) -> Float {
         let mut relative_velocity = vec![0.; DIMENSIONALITY];
         for i in 0..DIMENSIONALITY {
@@ -112,13 +113,14 @@ impl Body {
         0.5 * self.mass * relative_speed_squared
     }
 
+    #[cfg(test)]
     pub(crate) fn relative_potential_energy(&self, other: &Self) -> Float {
         let mut relative_position = vec![0.; DIMENSIONALITY];
         for i in 0..DIMENSIONALITY {
             relative_position[i] = self.position[i] - other.position[i];
         }
         let distance_squared = relative_position.iter().map(|x| x * x).sum::<Float>();
-        -G * self.mass * other.mass / distance_squared.sqrt()
+        -0.5 * G * self.mass * other.mass / distance_squared.sqrt()
     }
 }
 
