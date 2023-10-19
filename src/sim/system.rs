@@ -33,10 +33,10 @@ impl StellarSystem {
         }
     }
 
-    fn get_acceleration(body1: &Body, body2: &Body) -> Vec<Float> {
+    fn get_acceleration(accelerated: &Body, accelerating: &Body) -> Vec<Float> {
         let mut r = vec![0.; DIMENSIONALITY];
         for i in 0..DIMENSIONALITY {
-            r[i] = body1.position[i] - body2.position[i];
+            r[i] = accelerated.position[i] - accelerating.position[i];
         }
         let r_squared = r.iter().map(|x| x * x).sum::<Float>();
         let r_cubed = r_squared * r_squared.sqrt();
@@ -46,7 +46,7 @@ impl StellarSystem {
             .collect::<Vec<Float>>();
         r_unit
             .iter()
-            .map(|x| -G * body1.mass * body2.mass * x / r_cubed)
+            .map(|x| -G * accelerating.mass * x / r_cubed)
             .collect::<Vec<Float>>()
     }
 
@@ -104,7 +104,53 @@ mod tests {
     use super::*;
 
     #[test]
-    fn gravitation_is_attractive() {
+    fn acceleration_is_antisymmetric() {
+        let body1 = Body {
+            position: vec![0., 0.],
+            velocity: vec![0., 0.],
+            mass: 1.,
+            index: 1,
+        };
+        let body2 = Body {
+            position: vec![1., 1.],
+            velocity: vec![0., 0.],
+            mass: 1.,
+            index: 2,
+        };
+        let acc_1 = StellarSystem::get_acceleration(&body1, &body2);
+        let acc_2 = StellarSystem::get_acceleration(&body2, &body1);
+        println!("Acceleration of body 1:\n{:?}", acc_1);
+        println!("Acceleration of body 2:\n{:?}", acc_2);
+        assert!((acc_1[0] + acc_2[0]).abs() < 1e-5);
+        assert!((acc_1[1] + acc_2[1]).abs() < 1e-5);
+    }
+
+    #[test]
+    fn acceleration_depends_on_inertia() {
+        let body1 = Body {
+            position: vec![0., 0.],
+            velocity: vec![0., 0.],
+            mass: 1e5,
+            index: 1,
+        };
+        let body2 = Body {
+            position: vec![1., 1.],
+            velocity: vec![0., 0.],
+            mass: 1e-5,
+            index: 2,
+        };
+        let acc_large_body = StellarSystem::get_acceleration(&body1, &body2);
+        let acc_small_body = StellarSystem::get_acceleration(&body2, &body1);
+        println!("Acceleration of large body:\n{:?}", acc_large_body);
+        println!("Acceleration of small body:\n{:?}", acc_small_body);
+        assert!(acc_large_body[0].abs() < 1e-5);
+        assert!(acc_large_body[1].abs() < 1e-5);
+        assert!(acc_small_body[0].abs() > 1e-5);
+        assert!(acc_small_body[1].abs() > 1e-5);
+    }
+
+    #[test]
+    fn symmetric_bodies_end_up_resting() {
         const TIME_STEP: Float = 1e1;
 
         let position1 = vec![1., 0.];
@@ -137,6 +183,40 @@ mod tests {
         assert!(system.bodies[0].velocity[0] < 0.);
         assert!(system.bodies[1].velocity[0] > 0.);
 
+        let mut loop_count = 0;
+        while system.bodies.len() > 1 && loop_count < 10_000 {
+            system.evolve(TIME_STEP);
+            loop_count += 1;
+        }
+        print!("Looped {} times.", loop_count);
+        println!("{:?}", system);
+
+        assert!(system.bodies.len() == 1);
+        assert!(system.bodies[0].position[0].abs() < 1e-5);
+        assert!(system.bodies[0].position[1].abs() < 1e-5);
+        assert!(system.bodies[0].velocity[0].abs() < 1e-5);
+        assert!(system.bodies[0].velocity[1].abs() < 1e-5);
+    }
+
+    #[test]
+    fn small_body_falls_onto_large_body() {
+        const TIME_STEP: Float = 1e1;
+        let body1 = Body {
+            position: vec![0., 0.],
+            velocity: vec![0., 0.],
+            mass: 1e-5,
+            index: 1,
+        };
+        let body2 = Body {
+            position: vec![1., 1.],
+            velocity: vec![0., 0.],
+            mass: 1e5,
+            index: 2,
+        };
+        let mut system = StellarSystem {
+            current_time: 0.,
+            bodies: vec![body1, body2],
+        };
         let mut loop_count = 0;
         while system.bodies.len() > 1 && loop_count < 10_000 {
             system.evolve(TIME_STEP);
