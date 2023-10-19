@@ -60,7 +60,7 @@ impl Body {
         2. * relative_speed_squared.sqrt() * time_step + MIN_TIMESTEP > distance_squared.sqrt()
     }
 
-    fn specific_relative_angular_momentum(&self, other: &Self) -> Float {
+    pub(crate) fn specific_relative_angular_momentum(&self, other: &Self) -> Float {
         let mut relative_position = vec![0.; DIMENSIONALITY];
         for i in 0..DIMENSIONALITY {
             relative_position[i] = self.position[i] - other.position[i];

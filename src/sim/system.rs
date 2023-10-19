@@ -286,37 +286,54 @@ mod tests {
 
     #[test]
     fn two_body_system_is_stable() {
-        const TIME_STEP: Float = 1e1;
-        let body1 = Body {
-            position: vec![0., 0.],
-            velocity: vec![0., 0.],
-            mass: 1.,
-            index: 1,
-        };
-        let body2 = Body {
-            position: vec![1., 0.],
-            velocity: vec![0., 1.],
-            mass: 1.,
-            index: 2,
-        };
-        let mut system = StellarSystem {
-            current_time: 0.,
-            bodies: vec![body1, body2],
-        };
-        for _ in 0..10_000 {
-            system.evolve_for(TIME_STEP);
-        }
-        println!("{:?}", system);
+        const TIME_STEP: Float = 1.;
+        let values = vec![-1., 1., 1e2];
+        for x in values.iter() {
+            for y in values.iter() {
+                for v_x in values.iter() {
+                    for v_y in values.iter() {
+                        println!("x = {}, y = {}, v_x = {}, v_y = {}", x, y, v_x, v_y);
 
-        assert!(system.bodies.len() == 2);
-        assert!(system.bodies[0].position[0].abs() < 1e3);
-        assert!(system.bodies[0].position[1].abs() < 1e3);
-        assert!(system.bodies[0].velocity[0].abs() < 1e3);
-        assert!(system.bodies[0].velocity[1].abs() < 1e3);
-        assert!(system.bodies[1].position[0].abs() < 1e3);
-        assert!(system.bodies[1].position[1].abs() < 1e3);
-        assert!(system.bodies[1].velocity[0].abs() < 1e3);
-        assert!(system.bodies[1].velocity[1].abs() < 1e3);
+                        let body1 = Body {
+                            position: vec![0., 0.],
+                            velocity: vec![0., 0.],
+                            mass: 1.,
+                            index: 1,
+                        };
+                        let body2 = Body {
+                            position: vec![*x, *y],
+                            velocity: vec![*v_x, *v_y],
+                            mass: 1.,
+                            index: 2,
+                        };
+                        let initial_sam = body1.specific_relative_angular_momentum(&body2);
+                        if initial_sam.abs() < 1e-5 {
+                            continue;
+                        }
+                        let mut system = StellarSystem {
+                            current_time: 0.,
+                            bodies: vec![body1, body2],
+                        };
+
+                        println!("{:?}", system);
+                        println!("Initial specific angular momentum: {}", initial_sam);
+                        for i in 0..10_000 {
+                            system.evolve_for(TIME_STEP);
+
+                            println!("Loop {}", i);
+                            println!("{:?}", system);
+                            assert!(system.bodies.len() == 2);
+
+                            let new_sam = system.bodies[0]
+                                .specific_relative_angular_momentum(&system.bodies[1]);
+
+                            println!("Specific angular momentum: {}", new_sam);
+                            assert!((new_sam - initial_sam).abs() < 1e-3 * initial_sam.abs());
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]
