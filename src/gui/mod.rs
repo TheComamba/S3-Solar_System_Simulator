@@ -35,6 +35,7 @@ impl Sandbox for Gui {
             GuiMessage::Evolve => {
                 self.canvas_state.system.evolve_for(1e1);
                 self.canvas_state.bodies_cache.clear();
+                println!("\n{:?}\n", self.canvas_state.system);
             }
         };
     }

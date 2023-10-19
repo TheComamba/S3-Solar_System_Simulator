@@ -102,6 +102,24 @@ impl Body {
         }
         self.mass = total_mass;
     }
+
+    pub(crate) fn relative_kinetic_energy(&self, other: &Self) -> Float {
+        let mut relative_velocity = vec![0.; DIMENSIONALITY];
+        for i in 0..DIMENSIONALITY {
+            relative_velocity[i] = self.velocity[i] - other.velocity[i];
+        }
+        let relative_speed_squared = relative_velocity.iter().map(|x| x * x).sum::<Float>();
+        0.5 * self.mass * relative_speed_squared
+    }
+
+    pub(crate) fn relative_potential_energy(&self, other: &Self) -> Float {
+        let mut relative_position = vec![0.; DIMENSIONALITY];
+        for i in 0..DIMENSIONALITY {
+            relative_position[i] = self.position[i] - other.position[i];
+        }
+        let distance_squared = relative_position.iter().map(|x| x * x).sum::<Float>();
+        -G * self.mass * other.mass / distance_squared.sqrt()
+    }
 }
 
 #[cfg(test)]
@@ -192,6 +210,43 @@ mod tests {
                                 assert!(body1.will_collide(&body2));
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn close_but_escaping_bodies_will_not_collide() {
+        let values: Vec<Float> = vec![-1., 0., 1., 1e5];
+        for v_x_1 in values.iter() {
+            for v_y_1 in values.iter() {
+                for v_x_2 in values.iter() {
+                    for v_y_2 in values.iter() {
+                        println!(
+                            "v_x_1: {}, v_y_1: {}, v_x_2: {}, v_y_2: {}",
+                            v_x_1, v_y_1, v_x_2, v_y_2
+                        );
+                        if (v_x_1 - v_x_2).abs() < 1e-5 && (v_y_1 - v_y_2).abs() < 1e-5 {
+                            continue;
+                        }
+                        let body1 = Body {
+                            position: vec![*v_x_1 / 10., *v_y_1 / 10.],
+                            velocity: vec![*v_x_1, *v_y_1],
+                            mass: 1.,
+                            index: 1,
+                        };
+                        let body2 = Body {
+                            position: vec![*v_x_2 / 10., *v_y_2 / 10.],
+                            velocity: vec![*v_x_2, *v_y_2],
+                            mass: 1.,
+                            index: 2,
+                        };
+                        println!("body1: {:?}", body1);
+                        println!("body2: {:?}", body2);
+
+                        assert!(body1.comes_close(&body2, 1.));
+                        assert!(!body1.will_collide(&body2));
                     }
                 }
             }
