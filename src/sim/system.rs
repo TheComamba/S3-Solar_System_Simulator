@@ -204,6 +204,77 @@ mod tests {
     }
 
     #[test]
+    fn acceleration_is_isotropic() {
+        let mut acceleration_modulus = None;
+        for dir in 0..1 {
+            for sign in vec![-1., 1.] {
+                let body1 = Body {
+                    position: vec![0., 0.],
+                    velocity: vec![0., 0.],
+                    mass: 1.,
+                    index: 1,
+                };
+                let mut pos = vec![0., 0.];
+                pos[dir] = sign;
+                println!("Position: {:?}", pos);
+                let body2 = Body {
+                    position: pos,
+                    velocity: vec![0., 0.],
+                    mass: 1.,
+                    index: 2,
+                };
+                let new_acc = StellarSystem::get_acceleration(&body1, &body2)
+                    .iter()
+                    .map(|x| x * x)
+                    .sum::<Float>()
+                    .sqrt();
+                match acceleration_modulus {
+                    None => acceleration_modulus = Some(new_acc),
+                    Some(old_acc) => {
+                        println!("Old acceleration:\n{:?}", new_acc);
+                        println!("New acceleration:\n{:?}", old_acc);
+                        assert!((new_acc - old_acc).abs() < 1e-5);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn acceleration_is_translation_invariant() {
+        let values = [-1., 0., 1., 1e5];
+        let diff = vec![1., -3.];
+        let mut initial_acceleration = None;
+        for x in values.iter() {
+            for y in values.iter() {
+                println!("x = {}, y = {}", x, y);
+                let body1 = Body {
+                    position: vec![*x, *y],
+                    velocity: vec![0., 0.],
+                    mass: 1.,
+                    index: 1,
+                };
+                let body2 = Body {
+                    position: vec![*x + diff[0], *y + diff[1]],
+                    velocity: vec![0., 0.],
+                    mass: 1.,
+                    index: 2,
+                };
+                let acceleration = StellarSystem::get_acceleration(&body1, &body2);
+                match &initial_acceleration {
+                    None => initial_acceleration = Some(acceleration.clone()),
+                    Some(old_acc) => {
+                        println!("Initial acceleration:\n{:?}", old_acc);
+                        println!("New acceleration:\n{:?}", acceleration);
+                        assert!((old_acc[0] - acceleration[0]).abs() < 1e-5);
+                        assert!((old_acc[1] - acceleration[1]).abs() < 1e-5);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn acceleration_depends_on_inertia() {
         let body1 = Body {
             position: vec![0., 0.],
@@ -761,9 +832,10 @@ mod tests {
         };
         let initial_potential_energy =
             system.bodies[1].relative_potential_energy(&system.bodies[0]);
-            let initial_kinetic_energy1 = system.bodies[0].kinetic_energy();
+        let initial_kinetic_energy1 = system.bodies[0].kinetic_energy();
         let initial_kinetic_energy2 = system.bodies[1].kinetic_energy();
-        let initial_total_energy = initial_potential_energy + initial_kinetic_energy1 + initial_kinetic_energy2;
+        let initial_total_energy =
+            initial_potential_energy + initial_kinetic_energy1 + initial_kinetic_energy2;
         println!("Initial potential: {}", initial_potential_energy);
         println!("Initial kinetic 1: {}", initial_kinetic_energy1);
         println!("Initial kinetic 2: {}", initial_kinetic_energy2);
