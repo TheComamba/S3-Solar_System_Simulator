@@ -163,6 +163,18 @@ impl StellarSystem {
             self.do_evolution_step(time_step);
         }
     }
+
+    #[cfg(test)]
+    fn total_energy(&self) -> Float {
+        let mut total_energy = 0.;
+        for i in 0..self.bodies.len() {
+            total_energy += self.bodies[i].kinetic_energy();
+            for j in (i + 1)..self.bodies.len() {
+                total_energy += self.bodies[i].relative_potential_energy(&self.bodies[j]);
+            }
+        }
+        total_energy
+    }
 }
 
 #[cfg(test)]
@@ -687,6 +699,48 @@ mod tests {
     }
 
     #[test]
+    fn bound_three_body_system_remains_bound() {
+        const TIME_STEP: Float = 1e0;
+        let body1 = Body {
+            position: vec![0., 0.],
+            velocity: vec![0., 0.],
+            mass: 3.,
+            index: 1,
+        };
+        let body2 = Body {
+            position: vec![1., 0.],
+            velocity: vec![0., 0.01],
+            mass: 2.,
+            index: 2,
+        };
+        let body3 = Body {
+            position: vec![2., 0.],
+            velocity: vec![0., 0.001],
+            mass: 1.,
+            index: 3,
+        };
+        let mut system = StellarSystem {
+            current_time: 0.,
+            bodies: vec![body1, body2, body3],
+        };
+
+        let initial_total_energy = system.total_energy();
+        println!("Initial total energy: {}", initial_total_energy);
+
+        for _ in 0..100 {
+            system.evolve_for(TIME_STEP);
+        }
+        println!("{:?}", system);
+        let new_total_energy = system.total_energy();
+        println!("New total energy: {}", new_total_energy);
+
+        assert!(system.bodies.len() == 3);
+        assert!(initial_total_energy < 0.);
+        assert!(new_total_energy < 0.);
+        assert!((new_total_energy - initial_total_energy).abs() < 1e-5);
+    }
+
+    #[test]
     fn escaping_a_massive_body_conserves_total_energy() {
         const TIME_STEP: Float = 1e1;
         let body1 = Body {
@@ -707,16 +761,17 @@ mod tests {
         };
         let initial_potential_energy =
             system.bodies[1].relative_potential_energy(&system.bodies[0]);
-        let initial_kinetic_energy = system.bodies[1].relative_kinetic_energy(&system.bodies[0]);
-        let initial_total_energy = initial_potential_energy + initial_kinetic_energy;
+            let initial_kinetic_energy1 = system.bodies[0].kinetic_energy();
+        let initial_kinetic_energy2 = system.bodies[1].kinetic_energy();
+        let initial_total_energy = initial_potential_energy + initial_kinetic_energy1 + initial_kinetic_energy2;
         println!("Initial potential: {}", initial_potential_energy);
-        println!("Initial kinetic: {}", initial_kinetic_energy);
+        println!("Initial kinetic 1: {}", initial_kinetic_energy1);
+        println!("Initial kinetic 2: {}", initial_kinetic_energy2);
         println!("Initial total: {}", initial_total_energy);
         assert!(initial_total_energy > 0.); //body escapes
 
         let mut loop_count = 0;
         while system.bodies[1].position[1].abs() < 1e3 && loop_count < 10_000 {
-            println!("{:?}", system);
             system.evolve_for(TIME_STEP);
             loop_count += 1;
         }
@@ -724,15 +779,17 @@ mod tests {
         println!("{:?}", system);
 
         let new_potential_energy = system.bodies[1].relative_potential_energy(&system.bodies[0]);
-        let new_kinetic_energy = system.bodies[1].relative_kinetic_energy(&system.bodies[0]);
-        let new_total_energy = new_potential_energy + new_kinetic_energy;
+        let new_kinetic_energy_1 = system.bodies[0].kinetic_energy();
+        let new_kinetic_energy_2 = system.bodies[1].kinetic_energy();
+        let new_total_energy = new_potential_energy + new_kinetic_energy_1 + new_kinetic_energy_2;
         println!("New potential: {}", new_potential_energy);
-        println!("New kinetic: {}", new_kinetic_energy);
+        println!("New kinetic energy 1: {}", new_kinetic_energy_2);
+        println!("New kinetic energy 2: {}", new_kinetic_energy_1);
         println!("New total: {}", new_total_energy);
 
         assert!(new_potential_energy.abs() < 1e-5);
         assert!(new_potential_energy > initial_potential_energy);
-        assert!(new_kinetic_energy < initial_kinetic_energy);
+        assert!(new_kinetic_energy_2 < initial_kinetic_energy2);
         assert!((initial_total_energy - new_total_energy).abs() < 1e-5);
 
         assert!(system.bodies[1].velocity[1] < 1.);
