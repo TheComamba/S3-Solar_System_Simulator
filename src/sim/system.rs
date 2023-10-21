@@ -114,7 +114,23 @@ impl StellarSystem {
         }
     }
 
-    fn do_evolution_step(&mut self, time_step: Float) {
+    fn leap_frog_kick(&mut self, time_step_half: Float, accelerations: Vec<Vec<Float>>) {
+        for i in 0..self.bodies.len() {
+            for k in 0..DIMENSIONALITY {
+                self.bodies[i].velocity[k] += accelerations[i][k] * time_step_half;
+            }
+        }
+    }
+
+    fn leap_frog_drift(&mut self, time_step: Float) {
+        for i in 0..self.bodies.len() {
+            for k in 0..DIMENSIONALITY {
+                self.bodies[i].position[k] += self.bodies[i].velocity[k] * time_step;
+            }
+        }
+    }
+
+    fn get_all_accelerations(&mut self) -> Vec<Vec<f32>> {
         let mut accelerations = vec![vec![0.; DIMENSIONALITY]; self.bodies.len()];
         for i in 0..self.bodies.len() {
             for j in 0..self.bodies.len() {
@@ -127,12 +143,15 @@ impl StellarSystem {
                 }
             }
         }
-        for i in 0..self.bodies.len() {
-            for k in 0..DIMENSIONALITY {
-                self.bodies[i].position[k] += self.bodies[i].velocity[k] * time_step;
-                self.bodies[i].velocity[k] += accelerations[i][k] * time_step;
-            }
-        }
+        accelerations
+    }
+
+    fn do_evolution_step(&mut self, time_step: Float) {
+        let accelerations = self.get_all_accelerations();
+        self.leap_frog_kick(0.5 * time_step, accelerations);
+        self.leap_frog_drift(time_step);
+        let accelerations = self.get_all_accelerations();
+        self.leap_frog_kick(0.5 * time_step, accelerations);
         self.current_time += time_step;
     }
 
@@ -668,7 +687,7 @@ mod tests {
     }
 
     #[test]
-    fn escaping_a_massive_body_costs_energy() {
+    fn escaping_a_massive_body_conserves_total_energy() {
         const TIME_STEP: Float = 1e1;
         let body1 = Body {
             position: vec![0., 0.],
