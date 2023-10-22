@@ -77,13 +77,13 @@ impl StellarSystem {
        r^2 / v^2 > t^2
     */
     fn get_timestep(&self, max: Float) -> Float {
+        assert_eq!(DIMENSIONALITY, 2);
         let mut time_step_sqrd = max * max;
         for i in 0..self.bodies.len() {
             for j in (i + 1)..self.bodies.len() {
                 let body1 = &self.bodies[i];
                 let body2 = &self.bodies[j];
 
-                assert_eq!(DIMENSIONALITY, 2);
                 let r = body1
                     .position
                     .iter()
@@ -159,6 +159,7 @@ impl StellarSystem {
         let target_time = self.current_time + time;
         while self.current_time < target_time {
             let time_step = self.get_timestep(target_time - self.current_time);
+            //println!("Time step: {}", time_step);
             self.do_collisions(time_step);
             self.do_evolution_step(time_step);
         }
@@ -1005,6 +1006,45 @@ mod tests {
                     }
                 }
             }
+        }
+    }
+
+    #[test]
+    fn specific_stability_test() {
+        let mut system = StellarSystem {
+            current_time: 110.0,
+            bodies: vec![
+                Body {
+                    index: 0,
+                    position: vec![-0.16409463, 0.31138736],
+                    velocity: vec![0.20223364, -0.07811384],
+                    mass: 0.5,
+                },
+                Body {
+                    index: 1,
+                    position: vec![-0.14044371, 0.3014494],
+                    velocity: vec![-0.40218723, 0.15970851],
+                    mass: 0.25,
+                },
+                Body {
+                    index: 2,
+                    position: vec![0.50843185, 1.4344311],
+                    velocity: vec![-0.002280068, -0.0034808216],
+                    mass: 0.25,
+                },
+            ],
+        };
+        println!("\n{:?}\n", system);
+
+        let initial_energy = system.total_energy();
+        println!("Initial energy: {}", initial_energy);
+        for _ in 0..100 {
+            system.evolve_for(0.1);
+
+            println!("\n{:?}\n", system);
+            let new_energy = system.total_energy();
+            println!("New energy: {}", new_energy);
+            assert!((new_energy - initial_energy).abs() < 1e-5 * initial_energy.abs());
         }
     }
 }
