@@ -17,3 +17,4 @@ pub(crate) const G: Float = 4. * PI * PI / 333_000.;
 // Assuming 5 g/cm^3 = 5000 kg/m^3
 pub(crate) const ROCK_DENSITY: Float =
     5_000. * DISTANCE_TO_M * DISTANCE_TO_M * DISTANCE_TO_M / MASS_TO_KG; //
+pub(crate) const VELOCITY_TO_KM_PER_S: Float = DISTANCE_TO_M / TIME_TO_SECONDS / 1e3;
