@@ -206,6 +206,10 @@ impl StellarSystem {
 
 #[cfg(test)]
 mod tests {
+    use std::f64::consts::PI;
+
+    use crate::sim::body;
+
     use super::*;
 
     #[test]
@@ -478,13 +482,15 @@ mod tests {
         Passed time:
         t = sqrt(R^3 / 2 G M) (sqrt(1/2 (1 - 1/2)) + arccos sqrt(1/2)) = sqrt(R^3 / 2 G M) (1/2 + Pi/4)
         R = 1., M = 1.
+        Time until collision:
+        sqrt(R^3 / 2 G M^2) * Pi/2
     */
-    //#[test]
+    #[test]
     fn relative_velocity_of_two_bodies_falling_half_their_distance() {
-        for r in [1e0, 1e1, 1e2] {
-            for m in [1e0, 1e1, 1e2] {
-                let t = ((r as Float).powi(3) / (2. * G * m)).sqrt()
-                    * (0.5 + std::f64::consts::PI / 4.) as Float;
+        let values: Vec<Float> = vec![1e0, 1e1, 1e2];
+        for r in values.clone() {
+            for m in values.clone() {
+                let t = (r.powi(3) / (2. * G * m)).sqrt() * (0.5 + PI / 4.) as Float;
                 let expected_velocity = (2. * G * m / r).sqrt();
 
                 println!("r = {}, m = {}", r, m);
@@ -1036,6 +1042,53 @@ mod tests {
     }
 
     #[test]
+    fn small_body_orbits_large_body() {
+        let large_mass = 1e5;
+        let small_mass = 1e-5;
+        let r: Float = 1.;
+        let orbital_period =
+            (PI as Float) * (r.powi(3) / (2. * G * (large_mass + small_mass))).sqrt();
+        let time_step = orbital_period / 4.;
+
+        let large = Body {
+            position: vec![0., 0.],
+            velocity: vec![0., 0.],
+            mass: large_mass,
+            index: 1,
+        };
+        let mut small = Body {
+            position: vec![r, 0.],
+            velocity: vec![0., 0.],
+            mass: small_mass,
+            index: 2,
+        };
+        small.set_velocity_for_circular_orbit(&large);
+        let mut system = StellarSystem {
+            current_time: 0.,
+            bodies: vec![large, small],
+        };
+
+        println!("\n{:?}\n", system);
+        assert!((system.bodies[1].position[0] - r).abs() < 1e-5 * r);
+        assert!(system.bodies[1].position[1].abs() < 1e-5);
+
+        system.evolve_for(time_step);
+        println!("\n{:?}\n", system);
+        assert!(system.bodies[1].position[0].abs() < 1e-5);
+        assert!((system.bodies[1].position[1] - r).abs() < 1e-5 * r);
+
+        system.evolve_for(time_step);
+        println!("\n{:?}\n", system);
+        assert!((system.bodies[1].position[0] + r).abs() < 1e-5 * r);
+        assert!(system.bodies[1].position[1].abs() < 1e-5);
+
+        system.evolve_for(time_step);
+        println!("\n{:?}\n", system);
+        assert!(system.bodies[1].position[0].abs() < 1e-5);
+        assert!((system.bodies[1].position[1] + r).abs() < 1e-5 * r);
+    }
+
+    //#[test]
     fn specific_stability_test() {
         let mut system = StellarSystem {
             current_time: 110.0,

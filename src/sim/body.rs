@@ -118,6 +118,32 @@ impl Body {
         let distance_squared = relative_position.iter().map(|x| x * x).sum::<Float>();
         -G * self.mass * other.mass / distance_squared.sqrt()
     }
+
+    #[cfg(test)]
+    pub(crate) fn set_velocity_for_circular_orbit(&mut self, other: &Self) {
+        let mut barycenter = vec![0.; DIMENSIONALITY];
+        for i in 0..DIMENSIONALITY {
+            barycenter[i] = (self.position[i] * self.mass + other.position[i] * other.mass)
+                / (self.mass + other.mass);
+        }
+        let mut position_relative_to_barycenter = vec![0.; DIMENSIONALITY];
+        for i in 0..DIMENSIONALITY {
+            position_relative_to_barycenter[i] = self.position[i] - barycenter[i];
+        }
+        let distance_to_barycenter = position_relative_to_barycenter
+            .iter()
+            .map(|x| x.powi(2))
+            .sum::<Float>()
+            .sqrt();
+        let reduced_mass = self.mass * other.mass / (self.mass + other.mass);
+        let orbital_speed = (G * reduced_mass / distance_to_barycenter).sqrt();
+        let mut tangential_velocity = vec![0.; DIMENSIONALITY];
+        tangential_velocity[0] =
+            -position_relative_to_barycenter[1] * orbital_speed / distance_to_barycenter;
+        tangential_velocity[1] =
+            position_relative_to_barycenter[0] * orbital_speed / distance_to_barycenter;
+        self.velocity = tangential_velocity;
+    }
 }
 
 #[cfg(test)]
