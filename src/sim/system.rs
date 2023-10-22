@@ -1,7 +1,5 @@
-use crate::{
-    sim::body::Body,
-    sim::initial_parameters::{Float, InitialParameters, DIMENSIONALITY, G},
-};
+use super::units::{Float, DIMENSIONALITY, G};
+use crate::{sim::body::Body, sim::initial_parameters::InitialParameters};
 
 pub(crate) const MIN_TIMESTEP: Float = 1e-8;
 
@@ -206,9 +204,7 @@ impl StellarSystem {
 
 #[cfg(test)]
 mod tests {
-    use std::f64::consts::PI;
-
-    use crate::sim::body;
+    use crate::sim::{body, units::PI};
 
     use super::*;
 

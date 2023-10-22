@@ -1,7 +1,4 @@
-pub(crate) type Float = f32;
-pub(crate) const G: Float = 1.184e-4;
-pub(crate) const ROCK_DENSITY: Float = 2.803e12; //5 g/cm^3 = 5000 kg/m^3
-pub(crate) const DIMENSIONALITY: usize = 2;
+use super::units::Float;
 
 pub(crate) struct InitialParameters {
     pub(crate) body_count: u32,

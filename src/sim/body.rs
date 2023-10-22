@@ -1,7 +1,7 @@
-use crate::sim::initial_parameters::{Float, DIMENSIONALITY, G, ROCK_DENSITY};
-use rand_distr::{Distribution, Normal};
-
 use super::system::MIN_TIMESTEP;
+use super::units::{Float, DIMENSIONALITY, G};
+use crate::sim::units::{PI, ROCK_DENSITY};
+use rand_distr::{Distribution, Normal};
 
 #[derive(Clone, Debug)]
 pub(crate) struct Body {
@@ -42,7 +42,7 @@ impl Body {
     }
 
     pub(crate) fn radius(&self) -> Float {
-        const MASS_TO_VOLUME_FACTOR: Float = 3. / (4. * std::f32::consts::PI * ROCK_DENSITY);
+        const MASS_TO_VOLUME_FACTOR: Float = 3. / (4. * PI * ROCK_DENSITY);
         (self.mass * MASS_TO_VOLUME_FACTOR).cbrt()
     }
 
