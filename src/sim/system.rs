@@ -72,12 +72,12 @@ impl StellarSystem {
     }
 
     /*
-        Condition 1: Bodies do not collide
-        r d > v * t
+        Condition 1: Distance does not change too much
+        r d > v t
         => r d / v > t
         => t^2 < r^2 d^2 / v^2
 
-        Condition 2: Gravitational field is homogenous
+        Condition 2: Gravitational field is roughly homogenous
         d a(0) > |a(0) - a(t)|
         => d G M / r^2 > G M / r^2 - G M / (r + v t)^2
         => d > 1 - r^2 / (r + v t)^2
@@ -89,12 +89,19 @@ impl StellarSystem {
         => t < d r / (2 v)
         => t^2 < d^2 r^2 / (4 v^2) = d'^2 r^2 / v^2
         => Condition 2 implies Condition 1
+
+        Condition 3: Velocity change is small
+        d v(0) > |v(0) - v(t)|
+        => d v > |v - v - a t| = G M t / r^2
+        => t < d v r^2 / (G M)
+        => t^2 < v^2 r^4 d^2 / (G M)^2
     */
     fn get_timestep(&self, max: Float) -> Float {
         const D_SQUARED: Float = 1e-8;
         assert_eq!(DIMENSIONALITY, 2);
         let mut time_step_sqrd = max * max;
         for i in 0..self.bodies.len() {
+            let d_over_g_m_squared = D_SQUARED / (G * self.bodies[i].mass).powi(2);
             for j in (i + 1)..self.bodies.len() {
                 let body1 = &self.bodies[i];
                 let body2 = &self.bodies[j];
@@ -111,12 +118,16 @@ impl StellarSystem {
                     .zip(body2.velocity.iter())
                     .map(|(x, y)| (x - y).abs())
                     .collect::<Vec<Float>>();
-                let r_sqrd = r.iter().map(|x| x * x).sum::<Float>();
-                let mut v_sqrd = v.iter().map(|x| x * x).sum::<Float>();
+                let r_sqrd = r.iter().map(|x| x.powi(2)).sum::<Float>();
+                let mut v_sqrd = v.iter().map(|x| x.powi(2)).sum::<Float>();
                 if v_sqrd < MIN_TIMESTEP * MIN_TIMESTEP {
                     v_sqrd = MIN_TIMESTEP * MIN_TIMESTEP;
                 }
                 let candidate = D_SQUARED * r_sqrd / v_sqrd;
+                if candidate < time_step_sqrd {
+                    time_step_sqrd = candidate;
+                }
+                let candidate = v_sqrd * r_sqrd.powi(2) * d_over_g_m_squared;
                 if candidate < time_step_sqrd {
                     time_step_sqrd = candidate;
                 }
