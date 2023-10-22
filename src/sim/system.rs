@@ -931,4 +931,65 @@ mod tests {
 
         assert!(system.bodies[1].velocity[1] < 1.);
     }
+
+    /*
+       a_0 = G m M / R^2
+       v_1/2 = G m M / R^2 t / 2
+       r_1 = R - G m M / R^2 t^2 / 2
+       v_1 = v_1/2 + G m M / r_1^2 t / 2
+    */
+    #[test]
+    fn leap_frog_for_simple_case() {
+        let values: Vec<Float> = vec![1e0, 1e1, 1e2];
+        for m1 in values.clone() {
+            for m2 in values.clone() {
+                for r in values.clone() {
+                    for t in values.clone() {
+                        println!("m1 = {}, m2 = {}, r = {}, t = {}", m1, m2, r, t);
+
+                        let a_0 = G * m1 * m2 / r.powi(2);
+                        let v_1_2 = a_0 * t / 2.;
+                        let r_1 = r - v_1_2 * t;
+                        let a_1 = G * m1 * m2 / r_1.powi(2);
+                        let v_1 = v_1_2 + a_1 * t / 2.;
+
+                        println!("a_0: {}", a_0);
+                        println!("v_1/2: {}", v_1_2);
+                        println!("r_1: {}", r_1);
+                        println!("a_1: {}", a_1);
+                        println!("v_1: {}", v_1);
+
+                        let body1 = Body {
+                            position: vec![0., 0.],
+                            velocity: vec![0., 0.],
+                            mass: m1,
+                            index: 1,
+                        };
+                        let body2 = Body {
+                            position: vec![r_1, 0.],
+                            velocity: vec![0., 0.],
+                            mass: m2,
+                            index: 2,
+                        };
+                        let mut system = StellarSystem {
+                            current_time: 0.,
+                            bodies: vec![body1, body2],
+                        };
+
+                        system.do_evolution_step(t);
+                        println!("{:?}", system);
+
+                        let relative_distance =
+                            (system.bodies[0].position[0] - system.bodies[1].position[0]).abs();
+                        let relative_velocity =
+                            (system.bodies[0].velocity[0] - system.bodies[1].velocity[0]).abs();
+                        println!("Relative distance: {}", relative_distance);
+                        println!("Relative velocity: {}", relative_velocity);
+                        assert!((relative_distance - r_1).abs() < 1e-5 * r_1);
+                        assert!((relative_velocity - v_1).abs() < 1e-5 * v_1);
+                    }
+                }
+            }
+        }
+    }
 }
