@@ -3,7 +3,7 @@ use crate::{
     sim::initial_parameters::{Float, InitialParameters, DIMENSIONALITY, G},
 };
 
-pub(crate) const MIN_TIMESTEP: Float = 1e-5;
+pub(crate) const MIN_TIMESTEP: Float = 1e-8;
 
 #[derive(Clone, Debug)]
 pub(crate) struct StellarSystem {
@@ -72,11 +72,26 @@ impl StellarSystem {
     }
 
     /*
-       r > v * t
-       r / v > t
-       r^2 / v^2 > t^2
+        Condition 1: Bodies do not collide
+        r d > v * t
+        => r d / v > t
+        => t^2 < r^2 d^2 / v^2
+
+        Condition 2: Gravitational field is homogenous
+        d a(0) > |a(0) - a(t)|
+        => d G M / r^2 > G M / r^2 - G M / (r + v t)^2
+        => d > 1 - r^2 / (r + v t)^2
+        => r^2 / (r + v t)^2 > 1 - d
+        => (r + v t)^2 < r^2 / (1 - d)
+        => (1 + v t / r)^2 < 1 / (1 - d)
+        t is small, d is small
+        => 1 + 2 v t / r < 1 + d
+        => t < d r / (2 v)
+        => t^2 < d^2 r^2 / (4 v^2) = d'^2 r^2 / v^2
+        => Condition 2 implies Condition 1
     */
     fn get_timestep(&self, max: Float) -> Float {
+        const D_SQUARED: Float = 1e-8;
         assert_eq!(DIMENSIONALITY, 2);
         let mut time_step_sqrd = max * max;
         for i in 0..self.bodies.len() {
@@ -101,7 +116,7 @@ impl StellarSystem {
                 if v_sqrd < MIN_TIMESTEP * MIN_TIMESTEP {
                     v_sqrd = MIN_TIMESTEP * MIN_TIMESTEP;
                 }
-                let candidate = r_sqrd / v_sqrd;
+                let candidate = D_SQUARED * r_sqrd / v_sqrd;
                 if candidate < time_step_sqrd {
                     time_step_sqrd = candidate;
                 }
@@ -1046,5 +1061,31 @@ mod tests {
             println!("New energy: {}", new_energy);
             assert!((new_energy - initial_energy).abs() < 1e-5 * initial_energy.abs());
         }
+    }
+
+    fn other_specific_test_case() {
+        let mut system = StellarSystem {
+            current_time: 60.0,
+            bodies: vec![
+                Body {
+                    index: 0,
+                    position: vec![-0.15938611, -0.040578824],
+                    velocity: vec![-0.008027485, -0.0020192228],
+                    mass: 0.5,
+                },
+                Body {
+                    index: 1,
+                    position: vec![-1.7621905, -1.2192367],
+                    velocity: vec![0.0011315977, 0.00090261595],
+                    mass: 0.25,
+                },
+                Body {
+                    index: 2,
+                    position: vec![-0.37285408, -0.09300329],
+                    velocity: vec![0.01492337, 0.0031358302],
+                    mass: 0.25,
+                },
+            ],
+        };
     }
 }
