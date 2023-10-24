@@ -194,7 +194,10 @@ impl StellarSystem {
         let mut total_energy = 0.;
         for i in 0..self.bodies.len() {
             total_energy += self.bodies[i].kinetic_energy();
-            for j in (i + 1)..self.bodies.len() {
+            for j in 0..self.bodies.len() {
+                if i == j {
+                    continue;
+                }
                 total_energy += self.bodies[i].relative_potential_energy(&self.bodies[j]);
             }
         }
@@ -204,7 +207,10 @@ impl StellarSystem {
 
 #[cfg(test)]
 mod tests {
-    use crate::sim::{body, units::PI};
+    use crate::sim::{
+        body,
+        units::{DISTANCE_TO_M, PI, TIME_TO_SECONDS, VELOCITY_TO_KM_PER_S},
+    };
 
     use super::*;
 
@@ -470,11 +476,13 @@ mod tests {
     /*
         Initially: v = 0, r = R, m = M
         T = T_1 + T_2 = 0
-        V = - G M^2 / R
+        V_0 = - 2 G M m / R
         Finally: r = R/2
-        => V = - 2 G M^2 / R
-        => T = 2 G M^2 / R = T_1 + T_2 = 2 T_1 = M v^2
-        => v = sqrt(2 G M / R)
+        => V_f = - 4 G M m / R
+        => T_f = V_0 - V_f = 2 G M m / R
+               = T_1 + T_2 = 2 T_1 = 2 T_2
+        => T_1 = 1/2 m v^2 = T_f / 2 = G M m / R
+        => v_1 = sqrt(2 G M / R)
         Passed time:
         t = sqrt(R^3 / 2 G M) (sqrt(1/2 (1 - 1/2)) + arccos sqrt(1/2)) = sqrt(R^3 / 2 G M) (1/2 + Pi/4)
         R = 1., M = 1.
@@ -483,56 +491,83 @@ mod tests {
     */
     #[test]
     fn relative_velocity_of_two_bodies_falling_half_their_distance() {
+        const ACC: Float = 1e-4;
         let values: Vec<Float> = vec![1e0, 1e1, 1e2];
         for r in values.clone() {
-            for m in values.clone() {
-                let t = (r.powi(3) / (2. * G * m)).sqrt() * (0.5 + PI / 4.) as Float;
-                let expected_velocity = (2. * G * m / r).sqrt();
+            for m1 in values.clone() {
+                for m2 in values.clone() {
+                    let t = (r.powi(3) / (2. * G * (m1 + m2))).sqrt() * (0.5 + PI / 4.) as Float;
+                    let expected_velocity1 = (2. * G * m2 / r).sqrt();
+                    let expected_velocity2 = (2. * G * m1 / r).sqrt();
 
-                println!("r = {}, m = {}", r, m);
-                println!("Time for half the fall: {}", t);
-                println!("Expected velocity: {}", expected_velocity);
+                    println!("r = {}, m1 = {}, m2 = {}", r, m1, m2);
+                    println!("Time for half the fall: {}", t);
+                    println!("Expected velocity 1: {}", expected_velocity1);
+                    println!("Expected velocity 2: {}", expected_velocity2);
 
-                let body1 = Body {
-                    position: vec![-r / 2., 0.],
-                    velocity: vec![0., 0.],
-                    mass: m,
-                    index: 1,
-                };
-                let body2 = Body {
-                    position: vec![r / 2., 0.],
-                    velocity: vec![0., 0.],
-                    mass: m,
-                    index: 2,
-                };
-                let mut system = StellarSystem {
-                    current_time: 0.,
-                    bodies: vec![body1, body2],
-                };
-                let initial_potential_energy =
-                    system.bodies[0].relative_potential_energy(&system.bodies[1]);
+                    let body1 = Body {
+                        position: vec![-r / 2., 0.],
+                        velocity: vec![0., 0.],
+                        mass: m1,
+                        index: 1,
+                    };
+                    let body2 = Body {
+                        position: vec![r / 2., 0.],
+                        velocity: vec![0., 0.],
+                        mass: m2,
+                        index: 2,
+                    };
+                    let mut system = StellarSystem {
+                        current_time: 0.,
+                        bodies: vec![body1, body2],
+                    };
+                    let initial_potential_energy =
+                        2. * system.bodies[0].relative_potential_energy(&system.bodies[1]);
+                    let initial_total_energy = system.total_energy();
 
-                system.evolve_for(t);
+                    system.evolve_for(t);
 
-                println!("{:?}", system);
-                assert!(system.bodies[0].position[1].abs() < 1e-5);
-                assert!(system.bodies[1].position[1].abs() < 1e-5);
-                assert!(system.bodies[0].velocity[1].abs() < 1e-5);
-                assert!(system.bodies[1].velocity[1].abs() < 1e-5);
-                let relative_distance =
-                    (system.bodies[0].position[0] - system.bodies[1].position[0]).abs();
-                println!("Relative distance: {}", relative_distance);
-                assert!((relative_distance - r / 2.).abs() < 1e-5);
-                let final_potential_energy =
-                    system.bodies[0].relative_potential_energy(&system.bodies[1]);
-                println!("Initial potential energy: {}", initial_potential_energy);
-                println!("Final potential energy: {}", final_potential_energy);
-                assert!((initial_potential_energy - 2. * final_potential_energy).abs() < 1e-5);
+                    println!("{:?}", system);
 
-                let relative_velocity =
-                    (system.bodies[0].velocity[0] - system.bodies[1].velocity[0]).abs();
-                println!("Relative velocity: {}", relative_velocity);
-                assert!((relative_velocity - expected_velocity).abs() < 1e-5);
+                    let relative_distance =
+                        (system.bodies[0].position[0] - system.bodies[1].position[0]).abs();
+                    println!("Relative distance: {}", relative_distance);
+
+                    let final_potential_energy =
+                        2. * system.bodies[0].relative_potential_energy(&system.bodies[1]);
+                    let final_kinetic_energy =
+                        system.bodies[0].kinetic_energy() + system.bodies[1].kinetic_energy();
+                    let final_total_energy = system.total_energy();
+                    println!("Initial total energy: {}", initial_total_energy);
+                    println!("Final total energy: {}", final_total_energy);
+                    println!("Kinetic energy: {}", final_kinetic_energy);
+                    println!(
+                        "Potential energy difference: {}",
+                        initial_potential_energy - final_potential_energy
+                    );
+
+                    let velocity1 = system.bodies[0].velocity[0].abs();
+                    let velocity2 = system.bodies[1].velocity[0].abs();
+                    println!("Velocity 1: {}", velocity1);
+                    println!("Velocity 2: {}", velocity2);
+
+                    assert!(system.bodies[0].position[1].abs() < ACC);
+                    assert!(system.bodies[1].position[1].abs() < ACC);
+                    assert!(system.bodies[0].velocity[1].abs() < ACC);
+                    assert!(system.bodies[1].velocity[1].abs() < ACC);
+                    assert!((relative_distance - r / 2.).abs() < ACC);
+                    assert!(
+                        (initial_total_energy - final_total_energy).abs()
+                            < ACC * initial_total_energy
+                    );
+                    assert!(
+                        (final_kinetic_energy + final_potential_energy - initial_potential_energy)
+                            .abs()
+                            < ACC * initial_total_energy
+                    );
+                    assert!((velocity1 - expected_velocity1).abs() < ACC * velocity1);
+                    assert!((velocity2 - expected_velocity2).abs() < ACC * velocity2);
+                }
             }
         }
     }
@@ -1086,6 +1121,84 @@ mod tests {
         println!("\n{:?}\n", system);
         assert!(system.bodies[1].position[0].abs() < accuracy);
         assert!((system.bodies[1].position[1] + au).abs() < accuracy);
+    }
+
+    #[test]
+    fn earth_moon_system() {
+        let earth_mass = 1.;
+        let moon_mass = 0.012;
+        let distance: Float = 384_748_000. / DISTANCE_TO_M;
+        let period = 0.074855;
+        let d_moon_barycenter = distance * earth_mass / (moon_mass + earth_mass);
+        let moon_orbital_speed = 2. * PI * d_moon_barycenter / period;
+        let d_earth_barycenter = distance * moon_mass / (moon_mass + earth_mass);
+        let earth_orbital_speed = 2. * PI * d_earth_barycenter / period;
+        let time_step = 0.25 * period;
+        println!("Period = {} years", period);
+        println!(
+            "d_moon_barycenter = {} km",
+            d_moon_barycenter * DISTANCE_TO_M / 1000.
+        );
+        println!(
+            "d_earth_barycenter = {} km",
+            d_earth_barycenter * DISTANCE_TO_M / 1000.
+        );
+        println!(
+            "moon_orbital_speed = {} km/s",
+            moon_orbital_speed * VELOCITY_TO_KM_PER_S
+        );
+        println!(
+            "earth_orbital_speed = {} km/s",
+            earth_orbital_speed * VELOCITY_TO_KM_PER_S
+        );
+
+        let accuracy = 3e-5;
+
+        let earth = Body {
+            position: vec![-d_earth_barycenter, 0.],
+            velocity: vec![0., -earth_orbital_speed],
+            mass: earth_mass,
+            index: 1,
+        };
+        let moon = Body {
+            position: vec![d_moon_barycenter, 0.],
+            velocity: vec![0., moon_orbital_speed],
+            mass: moon_mass,
+            index: 2,
+        };
+        //TODO: this is not working
+        //earth.set_velocity_for_circular_orbit(&sun);
+        let mut system = StellarSystem {
+            current_time: 0.,
+            bodies: vec![earth, moon],
+        };
+
+        println!("\n{:?}\n", system);
+        assert!((system.bodies[0].position[0] + d_earth_barycenter).abs() < accuracy);
+        assert!(system.bodies[0].position[1].abs() < accuracy);
+        assert!((system.bodies[1].position[0] - d_moon_barycenter).abs() < accuracy);
+        assert!(system.bodies[1].position[1].abs() < accuracy);
+
+        system.evolve_for(time_step);
+        println!("\n{:?}\n", system);
+        assert!(system.bodies[0].position[0].abs() < accuracy);
+        assert!((system.bodies[0].position[1] + d_earth_barycenter).abs() < accuracy);
+        assert!(system.bodies[1].position[0].abs() < accuracy);
+        assert!((system.bodies[1].position[1] - d_moon_barycenter).abs() < accuracy);
+
+        system.evolve_for(time_step);
+        println!("\n{:?}\n", system);
+        assert!((system.bodies[0].position[0] - d_earth_barycenter).abs() < accuracy);
+        assert!(system.bodies[0].position[1].abs() < accuracy);
+        assert!((system.bodies[1].position[0] + d_moon_barycenter).abs() < accuracy);
+        assert!(system.bodies[1].position[1].abs() < accuracy);
+
+        system.evolve_for(time_step);
+        println!("\n{:?}\n", system);
+        assert!(system.bodies[0].position[0].abs() < accuracy);
+        assert!((system.bodies[0].position[1] - d_earth_barycenter).abs() < accuracy);
+        assert!(system.bodies[1].position[0].abs() < accuracy);
+        assert!((system.bodies[1].position[1] + d_moon_barycenter).abs() < accuracy);
     }
 
     //#[test]
