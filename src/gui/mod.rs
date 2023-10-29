@@ -26,7 +26,7 @@ impl Sandbox for Gui {
     fn new() -> Self {
         Gui {
             canvas_state: CanvasState::new(),
-            time_step: 1e0,
+            time_step: 1e-2,
         }
     }
 
@@ -96,12 +96,12 @@ impl Gui {
     ) -> iced::Element<'_, GuiMessage> {
         let decrease_time_step_button = Button::new(Text::new("<<")).on_press(decrease);
         let increase_time_step_button = Button::new(Text::new(">>")).on_press(increase);
-        let time_step_block = Row::new()
+        Row::new()
             .push(Text::new(value_name))
             .push(decrease_time_step_button)
             .push(Text::new(value))
-            .push(increase_time_step_button);
-        time_step_block.into()
+            .push(increase_time_step_button)
+            .into()
     }
 
     fn control_block(&self) -> iced::Element<'_, GuiMessage> {
@@ -150,12 +150,17 @@ impl CanvasState {
             bodies_cache: canvas::Cache::default(),
             system,
             body_size_factor: 1e5,
-            system_size_factor: 3e2,
+            system_size_factor: 1e-2,
         }
     }
 
     fn body_display_radius(&self, body: &Body) -> f32 {
-        (body.radius() * self.body_size_factor).log(2.)
+        let radius = body.radius() * self.body_size_factor;
+        if radius < 1.5 {
+            1.5
+        } else {
+            radius.sqrt()
+        }
     }
 }
 
@@ -181,8 +186,8 @@ impl<GuiMessage> canvas::Program<GuiMessage> for CanvasState {
                     let radius = self.body_display_radius(body);
                     let pos = frame.center()
                         + iced::Vector::new(
-                            body.position[0] * self.system_size_factor,
-                            body.position[1] * self.system_size_factor,
+                            body.position[0] / self.system_size_factor,
+                            body.position[1] / self.system_size_factor,
                         );
                     path_builder.circle(pos, radius);
                 }
