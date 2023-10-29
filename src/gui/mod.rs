@@ -8,10 +8,7 @@ use iced::{
     Color, Length, Sandbox, Size,
 };
 
-use crate::sim::{
-    initial_parameters::{Float, InitialParameters},
-    system::StellarSystem,
-};
+use crate::sim::{initial_parameters::InitialParameters, system::StellarSystem, units::Float};
 
 pub(crate) struct Gui {
     canvas_state: CanvasState,
@@ -33,8 +30,9 @@ impl Sandbox for Gui {
     fn update(&mut self, message: Self::Message) {
         match message {
             GuiMessage::Evolve => {
-                self.canvas_state.system.evolve(1e1);
+                self.canvas_state.system.evolve_for(1e1);
                 self.canvas_state.bodies_cache.clear();
+                println!("\n{:?}\n", self.canvas_state.system);
             }
         };
     }
