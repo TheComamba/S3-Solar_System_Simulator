@@ -38,13 +38,13 @@ impl Sandbox for Gui {
         match message {
             GuiMessage::Evolve => {
                 self.canvas_state.system.evolve_for(self.time_step);
-                self.canvas_state.bodies_cache.clear();
                 // println!("\n{:?}\n", self.canvas_state.system);
             }
             GuiMessage::ChangeTimeStep(step) => self.time_step = step,
             GuiMessage::ChangeBodySize(fac) => self.canvas_state.body_size_factor = fac,
             GuiMessage::ChangeSystemSize(fac) => self.canvas_state.system_size_factor = fac,
         };
+        self.canvas_state.bodies_cache.clear();
     }
 
     fn view(&self) -> iced::Element<'_, Self::Message> {
@@ -84,41 +84,50 @@ impl Gui {
     fn status_block(&self) -> iced::Element<'_, GuiMessage> {
         let time_text = Self::time_format(self.canvas_state.system.current_time * TIME_TO_SECONDS);
         let time_text = Text::new(format!("Evolution time: {}", time_text));
-        let body_size_factor_text = Text::new(format!(
-            "Body size factor: {}",
-            self.canvas_state.body_size_factor
-        ));
-        let system_size_factor_text = Text::new(format!(
-            "System size factor: {}",
-            self.canvas_state.system_size_factor
-        ));
-        Column::new()
-            .push(time_text)
-            .push(body_size_factor_text)
-            .push(system_size_factor_text)
-            .into()
+        Column::new().push(time_text).into()
     }
 
-    fn time_step_block(&self) -> iced::Element<'_, GuiMessage> {
-        let decrease_time_step_button =
-            Button::new(Text::new("<<")).on_press(GuiMessage::ChangeTimeStep(0.5 * self.time_step));
-        let increase_time_step_button =
-            Button::new(Text::new(">>")).on_press(GuiMessage::ChangeTimeStep(2. * self.time_step));
+    fn value_control_block(
+        &self,
+        value_name: &'static str,
+        value: String,
+        decrease: GuiMessage,
+        increase: GuiMessage,
+    ) -> iced::Element<'_, GuiMessage> {
+        let decrease_time_step_button = Button::new(Text::new("<<")).on_press(decrease);
+        let increase_time_step_button = Button::new(Text::new(">>")).on_press(increase);
         let time_step_block = Row::new()
-            .push(Text::new("Time step: "))
+            .push(Text::new(value_name))
             .push(decrease_time_step_button)
-            .push(Text::new(Self::time_format(
-                self.time_step * TIME_TO_SECONDS,
-            )))
+            .push(Text::new(value))
             .push(increase_time_step_button);
         time_step_block.into()
     }
 
     fn control_block(&self) -> iced::Element<'_, GuiMessage> {
-        let time_step_block = self.time_step_block();
+        let time_step_block = self.value_control_block(
+            "Time step: ",
+            Self::time_format(self.time_step * TIME_TO_SECONDS),
+            GuiMessage::ChangeTimeStep(0.5 * self.time_step),
+            GuiMessage::ChangeTimeStep(2. * self.time_step),
+        );
+        let system_size_block = self.value_control_block(
+            "System size factor: ",
+            format!("{}", self.canvas_state.system_size_factor),
+            GuiMessage::ChangeSystemSize(0.5 * self.canvas_state.system_size_factor),
+            GuiMessage::ChangeSystemSize(2. * self.canvas_state.system_size_factor),
+        );
+        let body_size_block = self.value_control_block(
+            "Body size factor: ",
+            format!("{}", self.canvas_state.body_size_factor),
+            GuiMessage::ChangeBodySize(0.5 * self.canvas_state.body_size_factor),
+            GuiMessage::ChangeBodySize(2. * self.canvas_state.body_size_factor),
+        );
         let evolve_button = Button::new(Text::new("Evolve")).on_press(GuiMessage::Evolve);
         Column::new()
             .push(time_step_block)
+            .push(system_size_block)
+            .push(body_size_block)
             .push(evolve_button)
             .into()
     }
