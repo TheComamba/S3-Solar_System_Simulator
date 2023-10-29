@@ -43,6 +43,8 @@ impl Sandbox for Gui {
             GuiMessage::ChangeTimeStep(step) => self.time_step = step,
             GuiMessage::ChangeBodySize(fac) => self.canvas_state.body_size_factor = fac,
             GuiMessage::ChangeSystemSize(fac) => self.canvas_state.system_size_factor = fac,
+            GuiMessage::ChangeSystemCenterX(x) => self.canvas_state.system_offset.0 = x,
+            GuiMessage::ChangeSystemCenterY(y) => self.canvas_state.system_offset.1 = y,
         };
         self.canvas_state.bodies_cache.clear();
     }
@@ -111,21 +113,43 @@ impl Gui {
             GuiMessage::ChangeTimeStep(0.5 * self.time_step),
             GuiMessage::ChangeTimeStep(2. * self.time_step),
         );
+        let system_center_x = self.value_control_block(
+            "System center x-pos: ",
+            format!("{:.2}", self.canvas_state.system_offset.0),
+            GuiMessage::ChangeSystemCenterX(
+                self.canvas_state.system_offset.0 - 10. * self.canvas_state.system_size_factor,
+            ),
+            GuiMessage::ChangeSystemCenterX(
+                self.canvas_state.system_offset.0 + 10. * self.canvas_state.system_size_factor,
+            ),
+        );
+        let system_center_y = self.value_control_block(
+            "System center y-pos: ",
+            format!("{:.2}", self.canvas_state.system_offset.1),
+            GuiMessage::ChangeSystemCenterY(
+                self.canvas_state.system_offset.1 - 10. * self.canvas_state.system_size_factor,
+            ),
+            GuiMessage::ChangeSystemCenterY(
+                self.canvas_state.system_offset.1 + 10. * self.canvas_state.system_size_factor,
+            ),
+        );
         let system_size_block = self.value_control_block(
             "System size factor: ",
-            format!("{}", self.canvas_state.system_size_factor),
+            format!("{:.2}", self.canvas_state.system_size_factor),
             GuiMessage::ChangeSystemSize(0.5 * self.canvas_state.system_size_factor),
             GuiMessage::ChangeSystemSize(2. * self.canvas_state.system_size_factor),
         );
         let body_size_block = self.value_control_block(
             "Body size factor: ",
-            format!("{}", self.canvas_state.body_size_factor),
+            format!("{:.2}", self.canvas_state.body_size_factor),
             GuiMessage::ChangeBodySize(0.5 * self.canvas_state.body_size_factor),
             GuiMessage::ChangeBodySize(2. * self.canvas_state.body_size_factor),
         );
         let evolve_button = Button::new(Text::new("Evolve")).on_press(GuiMessage::Evolve);
         Column::new()
             .push(time_step_block)
+            .push(system_center_x)
+            .push(system_center_y)
             .push(system_size_block)
             .push(body_size_block)
             .push(evolve_button)
@@ -139,6 +163,7 @@ struct CanvasState {
     system: StellarSystem,
     body_size_factor: Float,
     system_size_factor: Float,
+    system_offset: (Float, Float),
 }
 
 impl CanvasState {
@@ -151,16 +176,24 @@ impl CanvasState {
             system,
             body_size_factor: 1e5,
             system_size_factor: 1e-2,
+            system_offset: (0., 0.),
         }
     }
 
-    fn body_display_radius(&self, body: &Body) -> f32 {
+    fn body_display_radius(&self, body: &Body) -> Float {
         let radius = body.radius() * self.body_size_factor;
         if radius < 1.5 {
             1.5
         } else {
             radius.sqrt()
         }
+    }
+
+    fn body_display_position(&self, body: &Body) -> (Float, Float) {
+        (
+            (body.position[0] - self.system_offset.0) / self.system_size_factor,
+            (body.position[1] - self.system_offset.1) / self.system_size_factor,
+        )
     }
 }
 
@@ -184,11 +217,8 @@ impl<GuiMessage> canvas::Program<GuiMessage> for CanvasState {
             let bodies = Path::new(|path_builder| {
                 for body in &self.system.bodies {
                     let radius = self.body_display_radius(body);
-                    let pos = frame.center()
-                        + iced::Vector::new(
-                            body.position[0] / self.system_size_factor,
-                            body.position[1] / self.system_size_factor,
-                        );
+                    let (x, y) = self.body_display_position(body);
+                    let pos = frame.center() + iced::Vector::new(x, y);
                     path_builder.circle(pos, radius);
                 }
             });
@@ -204,4 +234,6 @@ pub(crate) enum GuiMessage {
     ChangeTimeStep(Float),
     ChangeBodySize(Float),
     ChangeSystemSize(Float),
+    ChangeSystemCenterX(Float),
+    ChangeSystemCenterY(Float),
 }
