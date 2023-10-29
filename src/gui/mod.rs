@@ -8,7 +8,7 @@ use iced::{
     Color, Length, Sandbox, Size,
 };
 
-use crate::sim::{initial_parameters::InitialParameters, system::StellarSystem, units::Float};
+use crate::sim::{initial_parameters::InitialParameters, system::StellarSystem, units::Float, body::Body};
 
 pub(crate) struct Gui {
     canvas_state: CanvasState,
@@ -32,7 +32,7 @@ impl Sandbox for Gui {
             GuiMessage::Evolve => {
                 self.canvas_state.system.evolve_for(1e1);
                 self.canvas_state.bodies_cache.clear();
-                println!("\n{:?}\n", self.canvas_state.system);
+                // println!("\n{:?}\n", self.canvas_state.system);
             }
         };
     }
@@ -68,9 +68,13 @@ impl CanvasState {
             background_cache: canvas::Cache::default(),
             bodies_cache: canvas::Cache::default(),
             system,
-            body_size_factor: 5e5,
-            system_size_factor: 1e2,
+            body_size_factor: 1e5,
+            system_size_factor: 3e2,
         }
+    }
+
+    fn body_display_radius(&self, body: &Body) -> f32 {
+        (body.radius() * self.body_size_factor).log(2.)
     }
 }
 
@@ -93,7 +97,7 @@ impl<GuiMessage> canvas::Program<GuiMessage> for CanvasState {
         let bodies = self.bodies_cache.draw(renderer, bounds.size(), |frame| {
             let bodies = Path::new(|path_builder| {
                 for body in &self.system.bodies {
-                    let radius = body.radius() * self.body_size_factor;
+                    let radius = self.body_display_radius(body);
                     let pos = frame.center()
                         + iced::Vector::new(
                             body.position[0] * self.system_size_factor,
