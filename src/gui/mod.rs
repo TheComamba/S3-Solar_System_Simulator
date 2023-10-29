@@ -8,7 +8,9 @@ use iced::{
     Color, Length, Sandbox, Size,
 };
 
-use crate::sim::{initial_parameters::InitialParameters, system::StellarSystem, units::Float, body::Body};
+use crate::sim::{
+    body::Body, initial_parameters::InitialParameters, system::StellarSystem, units::Float,
+};
 
 pub(crate) struct Gui {
     canvas_state: CanvasState,
