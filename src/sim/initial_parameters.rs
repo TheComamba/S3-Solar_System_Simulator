@@ -12,9 +12,9 @@ impl Default for InitialParameters {
     fn default() -> Self {
         Self {
             body_count: 2,
-            total_mass: 1.,
-            stellar_mass_fraction: 0.5,
-            position_variance: 1.,
+            total_mass: 333_000.,
+            stellar_mass_fraction: 0.9,
+            position_variance: 3.,
             velocity_variance: 0.,
         }
     }
