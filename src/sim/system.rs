@@ -154,7 +154,7 @@ impl StellarSystem {
         }
     }
 
-    fn get_all_accelerations(&mut self) -> Vec<Vec<f32>> {
+    fn get_all_accelerations(&mut self) -> Vec<Vec<Float>> {
         let mut accelerations = vec![vec![0.; DIMENSIONALITY]; self.bodies.len()];
         for i in 0..self.bodies.len() {
             for j in 0..self.bodies.len() {
@@ -207,10 +207,7 @@ impl StellarSystem {
 
 #[cfg(test)]
 mod tests {
-    use crate::sim::{
-        body,
-        units::{DISTANCE_TO_M, PI, TIME_TO_SECONDS, VELOCITY_TO_KM_PER_S},
-    };
+    use crate::sim::units::{DISTANCE_TO_M, PI, VELOCITY_TO_KM_PER_S};
 
     use super::*;
 
@@ -489,7 +486,7 @@ mod tests {
         Time until collision:
         sqrt(R^3 / 2 G M^2) * Pi/2
     */
-    //#[test]
+    // #[test]
     fn relative_velocity_of_two_bodies_falling_half_their_distance() {
         const ACC: Float = 1e-4;
         let values: Vec<Float> = vec![1e0, 1e1, 1e2];
@@ -693,7 +690,7 @@ mod tests {
         assert!(system.bodies[0].velocity[1].abs() < 1e-5);
     }
 
-    //#[test]
+    // #[test]
     fn two_body_system_is_stable() {
         const TIME_STEP: Float = 1.;
         let values = vec![-1., 1., 1e2];
@@ -995,6 +992,68 @@ mod tests {
         assert!((initial_total_energy - new_total_energy).abs() < ACC * initial_total_energy.abs());
     }
 
+    #[test]
+    fn simulation_is_uniform() {
+        const TIME: Float = 1.0;
+        let values = vec![-1., 0.01, 0.1, 1e2];
+
+        let initial_system = StellarSystem {
+            current_time: 0.0,
+            bodies: vec![
+                Body {
+                    index: 0,
+                    position: vec![0.01, 0.02],
+                    velocity: vec![0.03, -0.04],
+                    mass: 0.5,
+                },
+                Body {
+                    index: 1,
+                    position: vec![-0.05, 0.06],
+                    velocity: vec![-0.07, 0.08],
+                    mass: 0.25,
+                },
+            ],
+        };
+        let mut evolved_system = initial_system.clone();
+        evolved_system.evolve_for(TIME);
+
+        println!("Evolved System: {:?}", evolved_system);
+
+        for x in values.clone() {
+            for y in values.clone() {
+                println!("Offset = ({}, {})", x, y);
+                let mut system = initial_system.clone();
+                system.bodies[0].position[0] += x;
+                system.bodies[0].position[1] += y;
+                system.bodies[1].position[0] += x;
+                system.bodies[1].position[1] += y;
+                system.evolve_for(TIME);
+                system.bodies[0].position[0] -= x;
+                system.bodies[0].position[1] -= y;
+                system.bodies[1].position[0] -= x;
+                system.bodies[1].position[1] -= y;
+                println!("System: {:?}", system);
+                assert!(system.bodies.len() == evolved_system.bodies.len());
+                assert!(
+                    (system.bodies[0].position[0] - evolved_system.bodies[0].position[0]).abs()
+                        < 1e-5
+                );
+                assert!(
+                    (system.bodies[0].position[1] - evolved_system.bodies[0].position[1]).abs()
+                        < 1e-5
+                );
+                assert!(
+                    (system.bodies[1].position[0] - evolved_system.bodies[1].position[0]).abs()
+                        < 1e-5
+                );
+                assert!(
+                    (system.bodies[1].position[1] - evolved_system.bodies[1].position[1]).abs()
+                        < 1e-5
+                );
+            }
+        }
+    }
+
     /*
         r_0_1 = 0
         r_0_2 = R
@@ -1200,7 +1259,7 @@ mod tests {
         assert!((system.bodies[1].position[1] + d_moon_barycenter).abs() < accuracy);
     }
 
-    //#[test]
+    // #[test]
     fn specific_stability_test() {
         let mut system = StellarSystem {
             current_time: 110.0,
@@ -1230,7 +1289,7 @@ mod tests {
         let initial_energy = system.total_energy();
         println!("Initial energy: {}", initial_energy);
         for _ in 0..100 {
-            system.evolve_for(0.1);
+            system.evolve_for(0.01);
 
             println!("\n{:?}\n", system);
             let new_energy = system.total_energy();
@@ -1239,6 +1298,73 @@ mod tests {
         }
     }
 
+    #[test]
+    fn specific_stability_test2() {
+        let mut system = StellarSystem {
+            current_time: 110.0,
+            bodies: vec![
+                Body {
+                    index: 0,
+                    position: vec![-0.16, 0.31],
+                    velocity: vec![0.2, -0.1],
+                    mass: 0.5,
+                },
+                Body {
+                    index: 1,
+                    position: vec![-0.14, 0.30],
+                    velocity: vec![-0.4, 0.2],
+                    mass: 0.25,
+                },
+            ],
+        };
+        println!("\n{:?}\n", system);
+
+        let initial_energy = system.total_energy();
+        println!("Initial energy: {}", initial_energy);
+        for _ in 0..100 {
+            system.evolve_for(0.01);
+
+            println!("\n{:?}\n", system);
+            let new_energy = system.total_energy();
+            println!("New energy: {}", new_energy);
+            assert!((new_energy - initial_energy).abs() < 1e-5 * initial_energy.abs());
+        }
+    }
+
+    #[test]
+    fn specific_stability_test3() {
+        let mut system = StellarSystem {
+            current_time: 110.0,
+            bodies: vec![
+                Body {
+                    index: 0,
+                    position: vec![-0.02, 0.01],
+                    velocity: vec![0.2, -0.1],
+                    mass: 0.5,
+                },
+                Body {
+                    index: 1,
+                    position: vec![0.0, 0.0],
+                    velocity: vec![-0.4, 0.2],
+                    mass: 0.25,
+                },
+            ],
+        };
+        println!("\n{:?}\n", system);
+
+        let initial_energy = system.total_energy();
+        println!("Initial energy: {}", initial_energy);
+        for _ in 0..100 {
+            system.evolve_for(0.01);
+
+            println!("\n{:?}\n", system);
+            let new_energy = system.total_energy();
+            println!("New energy: {}", new_energy);
+            assert!((new_energy - initial_energy).abs() < 1e-5 * initial_energy.abs());
+        }
+    }
+
+    // #[test]
     fn other_specific_test_case() {
         let mut system = StellarSystem {
             current_time: 60.0,
