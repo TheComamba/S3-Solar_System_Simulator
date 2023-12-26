@@ -989,10 +989,10 @@ mod tests {
         println!("New kinetic energy 2: {}", new_kinetic_energy_1);
         println!("New total: {}", new_total_energy);
 
-        assert!(new_potential_energy.abs() < ACC*initial_total_energy.abs());
+        assert!(new_potential_energy.abs() < ACC * initial_total_energy.abs());
         assert!(new_potential_energy > initial_potential_energy);
         assert!(new_kinetic_energy_2 < initial_kinetic_energy2);
-        assert!((initial_total_energy - new_total_energy).abs() < ACC*initial_total_energy.abs());
+        assert!((initial_total_energy - new_total_energy).abs() < ACC * initial_total_energy.abs());
     }
 
     /*
