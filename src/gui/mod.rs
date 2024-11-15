@@ -5,7 +5,7 @@ use iced::{
         canvas::{self, Path},
         Button, Column, Row, Text,
     },
-    Color, Length, Sandbox, Size,
+    Color, Length, Size,
 };
 
 use crate::sim::{
@@ -20,21 +20,17 @@ pub(crate) struct Gui {
     time_step: Float,
 }
 
-impl Sandbox for Gui {
-    type Message = GuiMessage;
-
-    fn new() -> Self {
+impl Default for Gui {
+    fn default() -> Self {
         Gui {
             canvas_state: CanvasState::new(),
             time_step: 1e-2,
         }
     }
+}
 
-    fn title(&self) -> String {
-        String::from("S3 - Solar System Simulator")
-    }
-
-    fn update(&mut self, message: Self::Message) {
+impl Gui {
+    pub(crate) fn update(&mut self, message: GuiMessage) {
         match message {
             GuiMessage::Evolve => {
                 self.canvas_state.system.evolve_for(self.time_step);
@@ -49,7 +45,7 @@ impl Sandbox for Gui {
         self.canvas_state.bodies_cache.clear();
     }
 
-    fn view(&self) -> iced::Element<'_, Self::Message> {
+    pub(crate) fn view(&self) -> iced::Element<'_, GuiMessage> {
         let header = Row::new()
             .push(self.status_block())
             .push(self.control_block());
@@ -59,7 +55,7 @@ impl Sandbox for Gui {
         Column::new()
             .push(header)
             .push(canvas)
-            .align_items(iced::Alignment::Center)
+            .align_x(iced::Alignment::Center)
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
